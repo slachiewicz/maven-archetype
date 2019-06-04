@@ -73,7 +73,7 @@
 
   <properties>
     <maven.archetype.scm.devConnection>scm:git:https://gitbox.apache.org/repos/asf/maven-archetype.git</maven.archetype.scm.devConnection>
-    <mavenVersion>3.0</mavenVersion>
+    <mavenVersion>3.6.1</mavenVersion>
     <javaVersion>8</javaVersion>
     <netbeans.hint.useExternalMaven>true</netbeans.hint.useExternalMaven>
     <wagonVersion>2.8</wagonVersion>
