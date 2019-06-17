@@ -73,7 +73,7 @@
 
   <properties>
     <maven.archetype.scm.devConnection>scm:git:https://gitbox.apache.org/repos/asf/maven-archetype.git</maven.archetype.scm.devConnection>
-    <mavenVersion>3.0</mavenVersion>
+    <mavenVersion>3.5.0</mavenVersion>
     <javaVersion>7</javaVersion>
     <netbeans.hint.useExternalMaven>true</netbeans.hint.useExternalMaven>
     <wagonVersion>2.8</wagonVersion>
@@ -151,7 +151,7 @@
       <dependency>
         <groupId>org.codehaus.plexus</groupId>
         <artifactId>plexus-utils</artifactId>
-        <version>3.0.21</version>
+        <version>3.0.24</version>
       </dependency>
       <dependency>
         <groupId>commons-io</groupId>
@@ -206,7 +206,7 @@
       <dependency>
         <groupId>commons-collections</groupId>
         <artifactId>commons-collections</artifactId>
-        <version>3.2.1</version>
+        <version>3.2.2</version>
       </dependency>
       <dependency>
         <groupId>junit</groupId>
