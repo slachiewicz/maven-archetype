@@ -32,14 +32,14 @@ import org.apache.maven.archetype.exception.UnknownArchetype;
 import org.apache.maven.archetype.old.descriptor.ArchetypeDescriptor;
 import org.codehaus.plexus.components.interactivity.PrompterException;
 import org.codehaus.plexus.testing.PlexusTest;
-import org.easymock.EasyMock;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
-import static org.easymock.EasyMock.anyObject;
-import static org.easymock.EasyMock.eq;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.eq;
 
 /**
  * TODO probably testing a little deep, could just test ArchetypeConfiguration
@@ -53,29 +53,27 @@ public class DefaultArchetypeGenerationConfiguratorTest {
     @BeforeEach
     public void setUp() throws Exception {
 
-        ArchetypeArtifactManager manager = EasyMock.createMock(ArchetypeArtifactManager.class);
+        ArchetypeArtifactManager manager = Mockito.mock(ArchetypeArtifactManager.class);
 
         File archetype = new File("archetype.jar");
-        EasyMock.expect(manager.exists(
+        Mockito.when(manager.exists(
                         eq("archetypeGroupId"),
                         eq("archetypeArtifactId"),
                         eq("archetypeVersion"),
-                        anyObject(),
-                        anyObject()))
-                .andReturn(true);
-        EasyMock.expect(manager.getArchetypeFile(
+                        any(),
+                        any()))
+                .thenReturn(true);
+        Mockito.when(manager.getArchetypeFile(
                         eq("archetypeGroupId"),
                         eq("archetypeArtifactId"),
                         eq("archetypeVersion"),
-                        anyObject(),
-                        anyObject()))
-                .andReturn(archetype);
-        EasyMock.expect(manager.isFileSetArchetype(archetype)).andReturn(false);
-        EasyMock.expect(manager.isOldArchetype(archetype)).andReturn(true);
+                        any(),
+                        any()))
+                .thenReturn(archetype);
+        Mockito.when(manager.isFileSetArchetype(archetype)).thenReturn(false);
+        Mockito.when(manager.isOldArchetype(archetype)).thenReturn(true);
 
-        EasyMock.expect(manager.getOldArchetypeDescriptor(archetype)).andReturn(new ArchetypeDescriptor());
-
-        EasyMock.replay(manager);
+        Mockito.when(manager.getOldArchetypeDescriptor(archetype)).thenReturn(new ArchetypeDescriptor());
         configurator.setArchetypeArtifactManager(manager);
     }
 

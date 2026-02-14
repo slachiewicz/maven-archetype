@@ -28,16 +28,16 @@ import org.apache.maven.archetype.common.ArchetypeArtifactManager;
 import org.apache.maven.archetype.metadata.ArchetypeDescriptor;
 import org.apache.maven.archetype.metadata.RequiredProperty;
 import org.codehaus.plexus.testing.PlexusTest;
-import org.easymock.EasyMock;
 import org.easymock.IAnswer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
-import static org.easymock.EasyMock.anyObject;
-import static org.easymock.EasyMock.anyString;
-import static org.easymock.EasyMock.eq;
-import static org.easymock.EasyMock.isNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.isNull;
 
 /**
  * Tests the ability to use variables in default fields in batch mode.
@@ -76,32 +76,30 @@ public class DefaultArchetypeGenerationConfigurator2Test {
         descriptor.addRequiredProperty(groupName);
         descriptor.addRequiredProperty(serviceName);
 
-        ArchetypeArtifactManager manager = EasyMock.createMock(ArchetypeArtifactManager.class);
+        ArchetypeArtifactManager manager = Mockito.mock(ArchetypeArtifactManager.class);
 
         File archetype = new File("archetype.jar");
 
-        EasyMock.expect(manager.exists(
+        Mockito.when(manager.exists(
                         eq("archetypeGroupId"),
                         eq("archetypeArtifactId"),
                         eq("archetypeVersion"),
-                        anyObject(),
-                        anyObject()))
-                .andReturn(true);
-        EasyMock.expect(manager.getArchetypeFile(
+                        any(),
+                        any()))
+                .thenReturn(true);
+        Mockito.when(manager.getArchetypeFile(
                         eq("archetypeGroupId"),
                         eq("archetypeArtifactId"),
                         eq("archetypeVersion"),
-                        anyObject(),
-                        anyObject()))
-                .andReturn(archetype);
-        EasyMock.expect(manager.isFileSetArchetype(archetype)).andReturn(true);
-        EasyMock.expect(manager.isOldArchetype(archetype)).andReturn(false);
-        EasyMock.expect(manager.getFileSetArchetypeDescriptor(archetype)).andReturn(descriptor);
-
-        EasyMock.replay(manager);
+                        any(),
+                        any()))
+                .thenReturn(archetype);
+        Mockito.when(manager.isFileSetArchetype(archetype)).thenReturn(true);
+        Mockito.when(manager.isOldArchetype(archetype)).thenReturn(false);
+        Mockito.when(manager.getFileSetArchetypeDescriptor(archetype)).thenReturn(descriptor);
         configurator.setArchetypeArtifactManager(manager);
 
-        queryer = EasyMock.mock(ArchetypeGenerationQueryer.class);
+        queryer = Mockito.mock(ArchetypeGenerationQueryer.class);
         configurator.setArchetypeGenerationQueryer(queryer);
     }
 
@@ -131,25 +129,22 @@ public class DefaultArchetypeGenerationConfigurator2Test {
         request.setArchetypeVersion("archetypeVersion");
         Properties properties = new Properties();
 
-        EasyMock.expect(queryer.getPropertyValue(eq("groupName"), anyString(), isNull()))
-                .andReturn("myGroupName");
+        Mockito.when(queryer.getPropertyValue(eq("groupName"), anyString(), isNull()))
+                .thenReturn("myGroupName");
 
-        EasyMock.expect(queryer.getPropertyValue(eq("serviceName"), anyString(), isNull()))
-                .andReturn("myServiceName");
+        Mockito.when(queryer.getPropertyValue(eq("serviceName"), anyString(), isNull()))
+                .thenReturn("myServiceName");
 
-        EasyMock.expect(queryer.getPropertyValue(anyString(), anyString(), anyObject()))
-                .andAnswer(new IAnswer<String>() {
+        Mockito.when(queryer.getPropertyValue(anyString(), anyString(), any()))
+                .thenAnswer(new IAnswer<String>() {
 
                     @Override
                     public String answer() throws Throwable {
-                        return (String) EasyMock.getCurrentArguments()[1];
+                        return (String) Mockito.getCurrentArguments()[1];
                     }
-                })
-                .anyTimes();
+                });
 
-        EasyMock.expect(queryer.confirmConfiguration(anyObject())).andReturn(Boolean.TRUE);
-
-        EasyMock.replay(queryer);
+        Mockito.when(queryer.confirmConfiguration(any())).thenReturn(Boolean.TRUE);
         configurator.configureArchetype(request, Boolean.TRUE, properties);
 
         assertEquals("com.example.myGroupName", request.getGroupId());
@@ -171,25 +166,22 @@ public class DefaultArchetypeGenerationConfigurator2Test {
         request.setArchetypeVersion("archetypeVersion");
         Properties properties = new Properties();
 
-        EasyMock.expect(queryer.getPropertyValue(eq("groupName"), anyString(), isNull()))
-                .andReturn("myGroupName");
+        Mockito.when(queryer.getPropertyValue(eq("groupName"), anyString(), isNull()))
+                .thenReturn("myGroupName");
 
-        EasyMock.expect(queryer.getPropertyValue(eq("serviceName"), anyString(), isNull()))
-                .andReturn("myServiceName");
+        Mockito.when(queryer.getPropertyValue(eq("serviceName"), anyString(), isNull()))
+                .thenReturn("myServiceName");
 
-        EasyMock.expect(queryer.getPropertyValue(anyString(), anyString(), anyObject()))
-                .andAnswer(new IAnswer<String>() {
+        Mockito.when(queryer.getPropertyValue(anyString(), anyString(), any()))
+                .thenAnswer(new IAnswer<String>() {
 
                     @Override
                     public String answer() throws Throwable {
-                        return (String) EasyMock.getCurrentArguments()[1];
+                        return (String) Mockito.getCurrentArguments()[1];
                     }
-                })
-                .anyTimes();
+                });
 
-        EasyMock.expect(queryer.confirmConfiguration(anyObject())).andReturn(Boolean.TRUE);
-
-        EasyMock.replay(queryer);
+        Mockito.when(queryer.confirmConfiguration(any())).thenReturn(Boolean.TRUE);
         configurator.configureArchetype(request, Boolean.TRUE, properties);
 
         assertEquals("MYSERVICENAME", request.getProperties().get("serviceUpper"));
@@ -211,25 +203,22 @@ public class DefaultArchetypeGenerationConfigurator2Test {
         request.setArchetypeVersion("archetypeVersion");
         Properties properties = new Properties();
 
-        EasyMock.expect(queryer.getPropertyValue(eq("groupName"), anyString(), isNull()))
-                .andReturn("myGroupName");
+        Mockito.when(queryer.getPropertyValue(eq("groupName"), anyString(), isNull()))
+                .thenReturn("myGroupName");
 
-        EasyMock.expect(queryer.getPropertyValue(eq("artifactId"), anyString(), isNull()))
-                .andReturn("my-service-name");
+        Mockito.when(queryer.getPropertyValue(eq("artifactId"), anyString(), isNull()))
+                .thenReturn("my-service-name");
 
-        EasyMock.expect(queryer.getPropertyValue(anyString(), anyString(), anyObject()))
-                .andAnswer(new IAnswer<String>() {
+        Mockito.when(queryer.getPropertyValue(anyString(), anyString(), any()))
+                .thenAnswer(new IAnswer<String>() {
 
                     @Override
                     public String answer() throws Throwable {
-                        return (String) EasyMock.getCurrentArguments()[1];
+                        return (String) Mockito.getCurrentArguments()[1];
                     }
-                })
-                .anyTimes();
+                });
 
-        EasyMock.expect(queryer.confirmConfiguration(anyObject())).andReturn(Boolean.TRUE);
-
-        EasyMock.replay(queryer);
+        Mockito.when(queryer.confirmConfiguration(any())).thenReturn(Boolean.TRUE);
         configurator.configureArchetype(request, Boolean.TRUE, properties);
 
         assertEquals("MyServiceName", request.getProperties().get("camelArtifact"));

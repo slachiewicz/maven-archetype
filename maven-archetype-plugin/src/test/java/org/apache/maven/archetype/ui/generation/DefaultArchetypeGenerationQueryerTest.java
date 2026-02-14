@@ -25,8 +25,8 @@ import java.util.regex.Pattern;
 import org.codehaus.plexus.components.interactivity.Prompter;
 import org.codehaus.plexus.components.interactivity.PrompterException;
 import org.codehaus.plexus.testing.PlexusTest;
-import org.easymock.EasyMock;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -38,12 +38,10 @@ public class DefaultArchetypeGenerationQueryerTest {
 
     @Test
     public void testPropertyRegexValidationRetry() throws PrompterException {
-        Prompter prompter = EasyMock.createMock(Prompter.class);
+        Prompter prompter = Mockito.mock(Prompter.class);
 
-        EasyMock.expect(prompter.prompt(EasyMock.anyObject())).andReturn("invalid-answer");
-        EasyMock.expect(prompter.prompt(EasyMock.anyObject())).andReturn("valid-answer");
-
-        EasyMock.replay(prompter);
+        Mockito.when(prompter.prompt(Mockito.any())).thenReturn("invalid-answer");
+        Mockito.when(prompter.prompt(Mockito.any())).thenReturn("valid-answer");
         queryer.setPrompter(prompter);
 
         String value = queryer.getPropertyValue("custom-property", null, Pattern.compile("^valid-.*"));

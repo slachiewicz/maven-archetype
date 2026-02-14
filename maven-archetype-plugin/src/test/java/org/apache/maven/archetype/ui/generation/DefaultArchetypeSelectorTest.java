@@ -29,10 +29,11 @@ import org.apache.maven.archetype.exception.ArchetypeSelectionFailure;
 import org.apache.maven.archetype.ui.ArchetypeDefinition;
 import org.codehaus.plexus.components.interactivity.PrompterException;
 import org.codehaus.plexus.testing.PlexusTest;
-import org.easymock.EasyMock;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.verify;
 
 @PlexusTest
 public class DefaultArchetypeSelectorTest {
@@ -47,16 +48,13 @@ public class DefaultArchetypeSelectorTest {
         request.setArchetypeGroupId("preset-groupId");
         request.setArchetypeVersion("preset-version");
 
-        ArchetypeSelectionQueryer queryer = EasyMock.createMock(ArchetypeSelectionQueryer.class);
-        // expect it to not be called
-
-        EasyMock.replay(queryer);
+        ArchetypeSelectionQueryer queryer = Mockito.mock(ArchetypeSelectionQueryer.class);
 
         selector.setArchetypeSelectionQueryer(queryer);
 
         selector.selectArchetype(request, Boolean.TRUE, "");
 
-        EasyMock.verify(queryer);
+        Mockito.verify(queryer);
 
         assertEquals("preset-groupId", request.getArchetypeGroupId());
         assertEquals("preset-artifactId", request.getArchetypeArtifactId());
@@ -68,16 +66,13 @@ public class DefaultArchetypeSelectorTest {
         ArchetypeGenerationRequest request = new ArchetypeGenerationRequest();
         request.setArchetypeArtifactId("preset-artifactId");
 
-        ArchetypeSelectionQueryer queryer = EasyMock.createMock(ArchetypeSelectionQueryer.class);
-        // expect it to not be called
-
-        EasyMock.replay(queryer);
+        ArchetypeSelectionQueryer queryer = Mockito.mock(ArchetypeSelectionQueryer.class);
 
         selector.setArchetypeSelectionQueryer(queryer);
 
         selector.selectArchetype(request, Boolean.TRUE, "");
 
-        EasyMock.verify(queryer);
+        Mockito.verify(queryer);
 
         assertEquals(DefaultArchetypeSelector.DEFAULT_ARCHETYPE_GROUPID, request.getArchetypeGroupId());
         assertEquals("preset-artifactId", request.getArchetypeArtifactId());
@@ -88,23 +83,21 @@ public class DefaultArchetypeSelectorTest {
     public void testArchetypeArtifactIdNotInRequest() throws PrompterException, ArchetypeSelectionFailure {
         ArchetypeGenerationRequest request = new ArchetypeGenerationRequest();
 
-        ArchetypeSelectionQueryer queryer = EasyMock.createMock(ArchetypeSelectionQueryer.class);
+        ArchetypeSelectionQueryer queryer = Mockito.mock(ArchetypeSelectionQueryer.class);
 
         Archetype archetype = new Archetype();
         archetype.setArtifactId("set-artifactId");
         archetype.setGroupId("set-groupId");
         archetype.setVersion("set-version");
-        ArchetypeDefinition y = EasyMock.anyObject();
-        Map<String, List<Archetype>> x = EasyMock.anyObject();
-        EasyMock.expect(queryer.selectArchetype(x, y)).andReturn(archetype);
-
-        EasyMock.replay(queryer);
+        ArchetypeDefinition y = Mockito.any();
+        Map<String, List<Archetype>> x = Mockito.any();
+        Mockito.when(queryer.selectArchetype(x, y)).thenReturn(archetype);
 
         selector.setArchetypeSelectionQueryer(queryer);
 
         selector.selectArchetype(request, Boolean.TRUE, "");
 
-        EasyMock.verify(queryer);
+        verify(queryer).selectArchetype(x, y);
 
         assertEquals("set-groupId", request.getArchetypeGroupId());
         assertEquals("set-artifactId", request.getArchetypeArtifactId());
@@ -115,16 +108,13 @@ public class DefaultArchetypeSelectorTest {
     public void testArchetypeNotInRequestDefaultsInBatchMode() throws PrompterException, ArchetypeSelectionFailure {
         ArchetypeGenerationRequest request = new ArchetypeGenerationRequest();
 
-        ArchetypeSelectionQueryer queryer = EasyMock.createMock(ArchetypeSelectionQueryer.class);
-        // expect it to not be called
-
-        EasyMock.replay(queryer);
+        ArchetypeSelectionQueryer queryer = Mockito.mock(ArchetypeSelectionQueryer.class);
 
         selector.setArchetypeSelectionQueryer(queryer);
 
         selector.selectArchetype(request, Boolean.FALSE, "");
 
-        EasyMock.verify(queryer);
+        Mockito.verify(queryer);
 
         assertEquals(DefaultArchetypeSelector.DEFAULT_ARCHETYPE_GROUPID, request.getArchetypeGroupId());
         assertEquals(DefaultArchetypeSelector.DEFAULT_ARCHETYPE_ARTIFACTID, request.getArchetypeArtifactId());
@@ -135,22 +125,20 @@ public class DefaultArchetypeSelectorTest {
     public void testArchetypeNotInRequestDefaults() throws PrompterException, ArchetypeSelectionFailure {
         ArchetypeGenerationRequest request = new ArchetypeGenerationRequest();
 
-        ArchetypeSelectionQueryer queryer = EasyMock.createMock(ArchetypeSelectionQueryer.class);
+        ArchetypeSelectionQueryer queryer = Mockito.mock(ArchetypeSelectionQueryer.class);
         Archetype archetype = new Archetype();
         archetype.setArtifactId("set-artifactId");
         archetype.setGroupId("set-groupId");
         archetype.setVersion("set-version");
-        ArchetypeDefinition y = EasyMock.anyObject();
-        Map<String, List<Archetype>> x = EasyMock.anyObject();
-        EasyMock.expect(queryer.selectArchetype(x, y)).andReturn(archetype);
-
-        EasyMock.replay(queryer);
+        ArchetypeDefinition y = Mockito.any();
+        Map<String, List<Archetype>> x = Mockito.any();
+        Mockito.when(queryer.selectArchetype(x, y)).thenReturn(archetype);
 
         selector.setArchetypeSelectionQueryer(queryer);
 
         selector.selectArchetype(request, Boolean.TRUE, "");
 
-        EasyMock.verify(queryer);
+        verify(queryer).selectArchetype(x, y);
 
         assertEquals("set-groupId", request.getArchetypeGroupId());
         assertEquals("set-artifactId", request.getArchetypeArtifactId());
