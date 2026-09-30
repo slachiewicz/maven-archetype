@@ -18,10 +18,6 @@
  */
 package org.apache.maven.archetype;
 
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -31,6 +27,11 @@ import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import org.apache.maven.api.RemoteRepository;
+import org.apache.maven.api.Session;
+import org.apache.maven.api.di.Inject;
+import org.apache.maven.api.di.Named;
+import org.apache.maven.api.di.Singleton;
 import org.apache.maven.archetype.catalog.Archetype;
 import org.apache.maven.archetype.catalog.ArchetypeCatalog;
 import org.apache.maven.archetype.creator.ArchetypeCreator;
@@ -38,8 +39,6 @@ import org.apache.maven.archetype.generator.ArchetypeGenerator;
 import org.apache.maven.archetype.source.ArchetypeDataSource;
 import org.apache.maven.archetype.source.ArchetypeDataSourceException;
 import org.codehaus.plexus.util.IOUtil;
-import org.eclipse.aether.RepositorySystemSession;
-import org.eclipse.aether.repository.RemoteRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -154,7 +153,7 @@ public class DefaultArchetypeManager implements ArchetypeManager {
     }
 
     @Override
-    public ArchetypeCatalog getLocalCatalog(RepositorySystemSession repositorySession) {
+    public ArchetypeCatalog getLocalCatalog(Session repositorySession) {
         try {
             ArchetypeDataSource source = archetypeSources.get("catalog");
 
@@ -166,8 +165,7 @@ public class DefaultArchetypeManager implements ArchetypeManager {
     }
 
     @Override
-    public ArchetypeCatalog getRemoteCatalog(
-            RepositorySystemSession repositorySession, List<RemoteRepository> remoteRepositories) {
+    public ArchetypeCatalog getRemoteCatalog(Session repositorySession, List<RemoteRepository> remoteRepositories) {
         try {
             ArchetypeDataSource source = archetypeSources.get("remote-catalog");
 
@@ -179,7 +177,7 @@ public class DefaultArchetypeManager implements ArchetypeManager {
     }
 
     @Override
-    public File updateLocalCatalog(RepositorySystemSession repositorySystemSession, Archetype archetype) {
+    public File updateLocalCatalog(Session repositorySystemSession, Archetype archetype) {
         try {
             ArchetypeDataSource source = archetypeSources.get("catalog");
 

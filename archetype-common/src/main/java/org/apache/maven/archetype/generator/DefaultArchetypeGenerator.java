@@ -18,16 +18,15 @@
  */
 package org.apache.maven.archetype.generator;
 
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
-
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.maven.api.RemoteRepository;
+import org.apache.maven.api.di.Inject;
+import org.apache.maven.api.di.Named;
+import org.apache.maven.api.di.Singleton;
 import org.apache.maven.archetype.ArchetypeGenerationRequest;
 import org.apache.maven.archetype.ArchetypeGenerationResult;
 import org.apache.maven.archetype.common.ArchetypeArtifactManager;
@@ -37,10 +36,6 @@ import org.apache.maven.archetype.exception.ArchetypeNotDefined;
 import org.apache.maven.archetype.exception.InvalidPackaging;
 import org.apache.maven.archetype.exception.UnknownArchetype;
 import org.apache.maven.archetype.old.OldArchetype;
-import org.eclipse.aether.RepositorySystem;
-import org.eclipse.aether.RepositorySystemSession;
-import org.eclipse.aether.repository.RemoteRepository;
-import org.eclipse.aether.repository.RepositoryPolicy;
 
 @Named
 @Singleton
@@ -52,18 +47,14 @@ public class DefaultArchetypeGenerator implements ArchetypeGenerator {
 
     private OldArchetype oldArchetype;
 
-    private RepositorySystem repositorySystem;
-
     @Inject
     public DefaultArchetypeGenerator(
             ArchetypeArtifactManager archetypeArtifactManager,
             FilesetArchetypeGenerator filesetGenerator,
-            OldArchetype oldArchetype,
-            RepositorySystem repositorySystem) {
+            OldArchetype oldArchetype) {
         this.archetypeArtifactManager = archetypeArtifactManager;
         this.filesetGenerator = filesetGenerator;
         this.oldArchetype = oldArchetype;
-        this.repositorySystem = repositorySystem;
     }
 
     private File getArchetypeFile(ArchetypeGenerationRequest request) throws ArchetypeException {
@@ -74,9 +65,9 @@ public class DefaultArchetypeGenerator implements ArchetypeGenerator {
         List<RemoteRepository> repos = new ArrayList<>(request.getRemoteRepositories());
 
         if (request != null && request.getArchetypeRepository() != null) {
-            RepositorySystemSession repositorySession = request.getRepositorySession();
-            RemoteRepository remoteRepo = createRepository(
-                    repositorySession, request.getArchetypeRepository(), request.getArchetypeArtifactId() + "-repo");
+            RemoteRepository remoteRepo = request.getSession()
+                    .createRemoteRepository(
+                            request.getArchetypeArtifactId() + "-repo", request.getArchetypeRepository());
 
             repos.add(remoteRepo);
         }
@@ -86,7 +77,7 @@ public class DefaultArchetypeGenerator implements ArchetypeGenerator {
                 request.getArchetypeArtifactId(),
                 request.getArchetypeVersion(),
                 repos,
-                request.getRepositorySession())) {
+                request.getSession())) {
             throw new UnknownArchetype("The desired archetype does not exist (" + request.getArchetypeGroupId() + ":"
                     + request.getArchetypeArtifactId() + ":" + request.getArchetypeVersion() + ")");
         }
@@ -96,7 +87,7 @@ public class DefaultArchetypeGenerator implements ArchetypeGenerator {
                 request.getArchetypeArtifactId(),
                 request.getArchetypeVersion(),
                 repos,
-                request.getRepositorySession());
+                request.getSession());
     }
 
     private void generateArchetype(ArchetypeGenerationRequest request, File archetypeFile) throws ArchetypeException {
@@ -150,26 +141,5 @@ public class DefaultArchetypeGenerator implements ArchetypeGenerator {
         } catch (ArchetypeException ex) {
             result.setCause(ex);
         }
-    }
-
-    private RemoteRepository createRepository(
-            RepositorySystemSession repositorySession, String url, String repositoryId) {
-
-        // snapshots vs releases
-        // offline = to turning the update policy off
-
-        // TODO: we'll need to allow finer grained creation of repositories but this will do for now
-
-        RepositoryPolicy repositoryPolicy = new RepositoryPolicy(
-                true, RepositoryPolicy.UPDATE_POLICY_ALWAYS, RepositoryPolicy.CHECKSUM_POLICY_WARN);
-
-        RemoteRepository remoteRepository = new RemoteRepository.Builder(repositoryId, "default", url)
-                .setSnapshotPolicy(repositoryPolicy)
-                .setReleasePolicy(repositoryPolicy)
-                .build();
-
-        return repositorySystem
-                .newResolutionRepositories(repositorySession, Collections.singletonList(remoteRepository))
-                .get(0);
     }
 }

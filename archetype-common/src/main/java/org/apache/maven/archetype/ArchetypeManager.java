@@ -22,11 +22,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.maven.api.RemoteRepository;
+import org.apache.maven.api.Session;
 import org.apache.maven.archetype.catalog.Archetype;
 import org.apache.maven.archetype.catalog.ArchetypeCatalog;
-import org.apache.maven.artifact.DependencyResolutionRequiredException;
-import org.eclipse.aether.RepositorySystemSession;
-import org.eclipse.aether.repository.RemoteRepository;
 
 /**
  * @author Jason van Zyl
@@ -67,7 +66,7 @@ public interface ArchetypeManager {
      * @param repositorySession
      * @return the catalog
      */
-    ArchetypeCatalog getLocalCatalog(RepositorySystemSession repositorySession);
+    ArchetypeCatalog getLocalCatalog(Session repositorySession);
 
     /**
      * Gives the catalog of archetypes located at
@@ -77,8 +76,7 @@ public interface ArchetypeManager {
      * @param remoteRepositories
      * @return the catalog
      */
-    ArchetypeCatalog getRemoteCatalog(
-            RepositorySystemSession repositorySession, List<RemoteRepository> remoteRepositories);
+    ArchetypeCatalog getRemoteCatalog(Session repositorySession, List<RemoteRepository> remoteRepositories);
 
     /**
      * Creates a jar file for an archetype.
@@ -88,12 +86,10 @@ public interface ArchetypeManager {
      * @param finalName
      * @return the File to the generated jar
      * @throws java.io.IOException
-     * @throws org.apache.maven.artifact.DependencyResolutionRequiredException
      * @deprecated replaced by archetype plugin's JarMojo using maven-archiver component for Reproducible Builds
      */
     @Deprecated
-    File archiveArchetype(File archetypeDirectory, File outputDirectory, String finalName)
-            throws DependencyResolutionRequiredException, IOException;
+    File archiveArchetype(File archetypeDirectory, File outputDirectory, String finalName) throws IOException;
 
-    File updateLocalCatalog(RepositorySystemSession repositorySystemSession, Archetype archetype);
+    File updateLocalCatalog(Session repositorySystemSession, Archetype archetype);
 }

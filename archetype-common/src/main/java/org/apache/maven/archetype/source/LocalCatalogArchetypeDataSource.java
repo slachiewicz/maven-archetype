@@ -18,9 +18,6 @@
  */
 package org.apache.maven.archetype.source;
 
-import javax.inject.Named;
-import javax.inject.Singleton;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -28,11 +25,13 @@ import java.io.Reader;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.maven.api.RemoteRepository;
+import org.apache.maven.api.Session;
+import org.apache.maven.api.di.Named;
+import org.apache.maven.api.di.Singleton;
 import org.apache.maven.archetype.catalog.Archetype;
 import org.apache.maven.archetype.catalog.ArchetypeCatalog;
 import org.codehaus.plexus.util.xml.XmlStreamReader;
-import org.eclipse.aether.RepositorySystemSession;
-import org.eclipse.aether.repository.RemoteRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,9 +41,8 @@ public class LocalCatalogArchetypeDataSource extends CatalogArchetypeDataSource 
     private static final Logger LOGGER = LoggerFactory.getLogger(LocalCatalogArchetypeDataSource.class);
 
     @Override
-    public File updateCatalog(RepositorySystemSession repositorySession, Archetype archetype)
-            throws ArchetypeDataSourceException {
-        File localRepo = repositorySession.getLocalRepository().getBasedir();
+    public File updateCatalog(Session repositorySession, Archetype archetype) throws ArchetypeDataSourceException {
+        File localRepo = repositorySession.getLocalRepository().getPath().toFile();
 
         File catalogFile = new File(localRepo, ARCHETYPE_CATALOG_FILENAME);
 
@@ -92,11 +90,10 @@ public class LocalCatalogArchetypeDataSource extends CatalogArchetypeDataSource 
     }
 
     @Override
-    public ArchetypeCatalog getArchetypeCatalog(
-            RepositorySystemSession repositorySession, List<RemoteRepository> remoteRepositories)
+    public ArchetypeCatalog getArchetypeCatalog(Session repositorySession, List<RemoteRepository> remoteRepositories)
             throws ArchetypeDataSourceException {
 
-        File localRepo = repositorySession.getLocalRepository().getBasedir();
+        File localRepo = repositorySession.getLocalRepository().getPath().toFile();
 
         File catalogFile = new File(localRepo, ARCHETYPE_CATALOG_FILENAME);
 

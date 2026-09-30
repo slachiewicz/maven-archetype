@@ -22,13 +22,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
+import org.apache.maven.api.RemoteRepository;
+import org.apache.maven.api.Session;
 import org.apache.maven.archetype.catalog.Archetype;
-import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.execution.MavenSession;
-import org.apache.maven.project.ProjectBuildingRequest;
-import org.eclipse.aether.RepositorySystem;
-import org.eclipse.aether.RepositorySystemSession;
-import org.eclipse.aether.repository.RemoteRepository;
 
 /**
  * <b>NOTICE</b> all setters method are public for technical reasons, should be recognised as internals,
@@ -37,25 +33,15 @@ import org.eclipse.aether.repository.RemoteRepository;
  * @author Jason van Zyl
  */
 public class ArchetypeGenerationRequest {
-    private ProjectBuildingRequest projectBuildingRequest;
-
     private boolean offline;
 
-    private MavenSession mavenSession;
-
-    private RepositorySystemSession repositorySession;
-
-    private RepositorySystem repositorySystem;
+    private Session session;
 
     private boolean interactiveMode;
 
     private boolean askForDefaultPropertyValues;
 
     private String outputDirectory;
-
-    private ArtifactRepository localRepository;
-
-    private List<ArtifactRepository> remoteArtifactRepositories;
 
     private List<RemoteRepository> remoteRepositories = Collections.emptyList();
 
@@ -105,43 +91,12 @@ public class ArchetypeGenerationRequest {
         this.archetypeRepository = archetype.getRepository();
     }
 
-    public MavenSession getMavenSession() {
-        return mavenSession;
+    public Session getSession() {
+        return session;
     }
 
-    public ArchetypeGenerationRequest setMavenSession(MavenSession mavenSession) {
-        this.mavenSession = mavenSession;
-        return this;
-    }
-
-    public RepositorySystemSession getRepositorySession() {
-        return repositorySession;
-    }
-
-    public ArchetypeGenerationRequest setRepositorySession(RepositorySystemSession repoSession) {
-        this.repositorySession = repoSession;
-        return this;
-    }
-
-    public RepositorySystem getRepositorySystem() {
-        return repositorySystem;
-    }
-
-    public ArchetypeGenerationRequest setRepositorySystem(RepositorySystem repositorySystem) {
-        this.repositorySystem = repositorySystem;
-        return this;
-    }
-
-    /**
-     * @deprecated please use {@link #getMavenSession()} and {@link MavenSession#getProjectBuildingRequest()}
-     */
-    @Deprecated
-    public ProjectBuildingRequest getProjectBuildingRequest() {
-        return projectBuildingRequest;
-    }
-
-    public ArchetypeGenerationRequest setProjectBuildingRequest(ProjectBuildingRequest projectBuildingRequest) {
-        this.projectBuildingRequest = projectBuildingRequest;
+    public ArchetypeGenerationRequest setSession(Session session) {
+        this.session = session;
         return this;
     }
 
@@ -257,20 +212,6 @@ public class ArchetypeGenerationRequest {
         return this;
     }
 
-    /**
-     * @deprecated please use {@link #getRepositorySession()} and {@link RepositorySystemSession#getLocalRepository()}
-     */
-    @Deprecated
-    public ArtifactRepository getLocalRepository() {
-        return localRepository;
-    }
-
-    public ArchetypeGenerationRequest setLocalRepository(ArtifactRepository localRepository) {
-        this.localRepository = localRepository;
-
-        return this;
-    }
-
     public String getOutputDirectory() {
         return outputDirectory;
     }
@@ -298,32 +239,12 @@ public class ArchetypeGenerationRequest {
         return this;
     }
 
-    /**
-     * @deprecated please use {@link #getRepositorySession()} and {@link RepositorySystemSession#isOffline()}
-     *         or {@link #getMavenSession()} and {@link MavenSession#isOffline()}
-     */
-    @Deprecated
     public boolean isOffline() {
         return offline;
     }
 
     public ArchetypeGenerationRequest setOffline(boolean offline) {
         this.offline = offline;
-        return this;
-    }
-
-    /**
-     * @deprecated please use {@link #getRemoteRepositories()}
-     */
-    @Deprecated
-    public List<ArtifactRepository> getRemoteArtifactRepositories() {
-        return remoteArtifactRepositories;
-    }
-
-    public ArchetypeGenerationRequest setRemoteArtifactRepositories(
-            List<ArtifactRepository> remoteArtifactRepositories) {
-        this.remoteArtifactRepositories = remoteArtifactRepositories;
-
         return this;
     }
 

@@ -35,35 +35,29 @@ package org.apache.maven.archetype.source;
  *  under the License.
  */
 
-import javax.inject.Inject;
-
 import java.io.File;
 import java.io.FileWriter;
 import java.io.Writer;
 
+import org.apache.maven.api.Session;
+import org.apache.maven.api.di.Inject;
+import org.apache.maven.api.di.testing.MavenDITest;
 import org.apache.maven.archetype.ArchetypeManager;
 import org.apache.maven.archetype.catalog.Archetype;
 import org.apache.maven.archetype.catalog.ArchetypeCatalog;
 import org.apache.maven.archetype.catalog.io.xpp3.ArchetypeCatalogXpp3Writer;
-import org.codehaus.plexus.testing.PlexusTest;
-import org.eclipse.aether.DefaultRepositorySystemSession;
-import org.eclipse.aether.RepositorySystem;
-import org.eclipse.aether.repository.LocalRepository;
-import org.eclipse.aether.repository.LocalRepositoryManager;
+import org.apache.maven.archetype.test.TestSessions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.codehaus.plexus.testing.PlexusExtension.getTestFile;
+import static org.apache.maven.testing.di.MavenDIExtension.getTestFile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@PlexusTest
+@MavenDITest
 public class LocalCatalogArchetypeDataSourceTest {
 
     @Inject
     private ArchetypeManager archetype;
-
-    @Inject
-    private RepositorySystem repositorySystem;
 
     @BeforeEach
     protected void setUp() throws Exception {
@@ -89,12 +83,9 @@ public class LocalCatalogArchetypeDataSourceTest {
     @Test
     public void testLocalCatalog() {
 
-        DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
-        LocalRepositoryManager localRepositoryManager = repositorySystem.newLocalRepositoryManager(
-                repositorySession, new LocalRepository(getTestFile("target/test-classes/repositories/test-catalog")));
-        repositorySession.setLocalRepositoryManager(localRepositoryManager);
+        Session session = TestSessions.create(getTestFile("target/test-classes/repositories/test-catalog"));
 
-        ArchetypeCatalog result = archetype.getLocalCatalog(repositorySession);
+        ArchetypeCatalog result = archetype.getLocalCatalog(session);
 
         assertEquals(1, result.getArchetypes().size());
         assertEquals("groupId", result.getArchetypes().get(0).getGroupId());

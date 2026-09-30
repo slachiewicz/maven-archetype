@@ -18,30 +18,20 @@
  */
 package org.apache.maven.archetype.downloader;
 
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
-
 import java.io.File;
 import java.util.List;
 
-import org.eclipse.aether.RepositorySystem;
-import org.eclipse.aether.RepositorySystemSession;
-import org.eclipse.aether.artifact.DefaultArtifact;
-import org.eclipse.aether.repository.RemoteRepository;
-import org.eclipse.aether.resolution.ArtifactRequest;
-import org.eclipse.aether.resolution.ArtifactResolutionException;
-import org.eclipse.aether.resolution.ArtifactResult;
+import org.apache.maven.api.ArtifactCoordinates;
+import org.apache.maven.api.DownloadedArtifact;
+import org.apache.maven.api.RemoteRepository;
+import org.apache.maven.api.Session;
+import org.apache.maven.api.di.Named;
+import org.apache.maven.api.di.Singleton;
+import org.apache.maven.api.services.ArtifactResolverException;
 
-/**
- * @author Jason van Zyl
- */
 @Named
 @Singleton
 public class DefaultDownloader implements Downloader {
-
-    @Inject
-    private RepositorySystem repositorySystem;
 
     @Override
     public File download(
@@ -49,16 +39,14 @@ public class DefaultDownloader implements Downloader {
             String artifactId,
             String version,
             List<RemoteRepository> remoteRepositories,
-            RepositorySystemSession repositorySystemSession)
+            Session session)
             throws DownloadException {
 
-        DefaultArtifact artifact = new DefaultArtifact(groupId, artifactId, "", "jar", version);
-
-        ArtifactRequest request = new ArtifactRequest(artifact, remoteRepositories, "archetype");
+        ArtifactCoordinates coordinates = session.createArtifactCoordinates(groupId, artifactId, version, "jar");
         try {
-            ArtifactResult result = repositorySystem.resolveArtifact(repositorySystemSession, request);
-            return result.getArtifact().getFile();
-        } catch (ArtifactResolutionException e) {
+            DownloadedArtifact result = session.resolveArtifact(coordinates, remoteRepositories);
+            return result.getPath().toFile();
+        } catch (ArtifactResolverException e) {
             throw new DownloadException("Could not resolve artifact " + artifactId, e);
         }
     }

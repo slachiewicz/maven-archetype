@@ -30,7 +30,7 @@ import org.xml.sax.SAXException;
 import org.xml.sax.SAXParseException;
 import org.xml.sax.helpers.DefaultHandler;
 
-import static org.codehaus.plexus.testing.PlexusExtension.getBasedir;
+import static org.apache.maven.testing.di.MavenDIExtension.getBasedir;
 
 public class ArchetypeXsdTest {
     private static final String ARCHETYPE_XSD = "archetype-1.0.0.xsd";

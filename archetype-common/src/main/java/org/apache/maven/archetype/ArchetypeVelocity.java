@@ -18,25 +18,40 @@
  */
 package org.apache.maven.archetype;
 
-import javax.inject.Named;
-import javax.inject.Singleton;
-
 import java.util.Properties;
 
-import org.codehaus.plexus.velocity.VelocityComponentConfigurator;
+import org.apache.maven.api.di.Named;
+import org.apache.maven.api.di.Singleton;
+import org.apache.velocity.app.VelocityEngine;
 
 /**
- * Velocity configurator. Used by {@link org.codehaus.plexus.velocity.VelocityComponent}
- * <p/>
- * Preserve compatibility of Velocity 2.2 with Velocity 1.x
+ * Provides the shared {@link VelocityEngine} used to process archetype templates.
+ * The engine settings are the ones the former {@code plexus-velocity} component applied
+ * (classpath and file resource loaders) plus the archetype specific compatibility settings.
+ *
  * <a href="https://velocity.apache.org/engine/2.3/upgrading.html">Velocity Upgrading</a>
  */
 @Named
 @Singleton
-class VelocityConfigurator implements VelocityComponentConfigurator {
+public class ArchetypeVelocity {
 
-    @Override
-    public void configure(Properties properties) {
+    private final VelocityEngine engine;
+
+    public ArchetypeVelocity() {
+        Properties properties = new Properties();
+        properties.setProperty("resource.loaders", "classpath,file");
+        properties.setProperty(
+                "resource.loader.classpath.class",
+                "org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader");
+        properties.setProperty(
+                "resource.loader.file.class", "org.apache.velocity.runtime.resource.loader.FileResourceLoader");
+        properties.setProperty("resource.loader.file.path", "");
+        properties.setProperty("runtime.log.log_invalid_references", "false");
+        properties.setProperty("resource.manager.log_when_found", "false");
+        properties.setProperty(
+                "event_handler.include.class", "org.apache.velocity.app.event.implement.IncludeRelativePath");
+        properties.setProperty("velocimacro.inline.replace_global", "true");
+        properties.setProperty("parser.space_gobbling", "bc");
 
         // # No automatic conversion of methods arguments
         properties.put("introspector.conversion_handler.class", "none");
@@ -61,5 +76,13 @@ class VelocityConfigurator implements VelocityComponentConfigurator {
 
         // # When using an invalid reference handler, also include tested references (since 2.2)
         properties.put("event_handler.invalid_references.tested", true);
+
+        engine = new VelocityEngine();
+        engine.setProperties(properties);
+        engine.init();
+    }
+
+    public VelocityEngine getEngine() {
+        return engine;
     }
 }

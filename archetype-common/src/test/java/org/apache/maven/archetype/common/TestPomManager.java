@@ -24,19 +24,21 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.maven.api.model.Dependency;
 import org.apache.maven.archetype.exception.InvalidPackaging;
-import org.apache.maven.model.Dependency;
-import org.apache.maven.model.Model;
+import org.apache.maven.impl.DefaultModelXmlFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestPomManager {
 
@@ -44,7 +46,7 @@ public class TestPomManager {
     // https://bugs.openjdk.java.net/browse/JDK-8262285?attachmentViewMode=list
     @Test
     public void testAddModulePomPackaging() throws Exception {
-        PomManager pomManager = new DefaultPomManager();
+        PomManager pomManager = new DefaultPomManager(new DefaultModelXmlFactory());
 
         Path pomPath = Paths.get(
                 getClass().getResource("/projects/pom-manager/pom-sample-1.xml").toURI());
@@ -64,7 +66,7 @@ public class TestPomManager {
 
     @Test
     public void testAddModuleNonPomPackaging() throws Exception {
-        PomManager pomManager = new DefaultPomManager();
+        PomManager pomManager = new DefaultPomManager(new DefaultModelXmlFactory());
 
         Path pomPath = Paths.get(
                 getClass().getResource("/projects/pom-manager/pom-sample-2.xml").toURI());
@@ -82,7 +84,39 @@ public class TestPomManager {
     }
 
     @Test
+    public void testAddParentKeepsLegacyElements(@TempDir Path tempDir) throws Exception {
+        PomManager pomManager = new DefaultPomManager(new DefaultModelXmlFactory());
+
+        // <reports> and plugin <goals> are not part of the Maven 4 model
+        Path pom = tempDir.resolve("pom.xml");
+        Files.write(
+                pom,
+                ("<project>\n"
+                                + "  <modelVersion>4.0.0</modelVersion>\n"
+                                + "  <artifactId>child</artifactId>\n"
+                                + "  <reports><report>x</report></reports>\n"
+                                + "  <build><plugins><plugin><artifactId>p</artifactId>"
+                                + "<goals><goal>g</goal></goals></plugin></plugins></build>\n"
+                                + "</project>\n")
+                        .getBytes(StandardCharsets.UTF_8));
+        Path parentPom = tempDir.resolve("parent.xml");
+        Files.write(
+                parentPom,
+                ("<project><modelVersion>4.0.0</modelVersion><groupId>g</groupId>"
+                                + "<artifactId>parent</artifactId><version>1</version></project>")
+                        .getBytes(StandardCharsets.UTF_8));
+
+        pomManager.addParent(pom.toFile(), parentPom.toFile());
+
+        String fileText = new String(Files.readAllBytes(pom), StandardCharsets.UTF_8);
+        assertTrue(fileText.contains("<reports>"), fileText);
+        assertTrue(fileText.contains("<goals>"), fileText);
+        assertEquals("parent", pomManager.readPom(pom.toFile()).getParent().getArtifactId());
+    }
+
+    @Test
     public void testMergePomsKeepsDeclaredDependencyOrder(@TempDir Path dir) throws Exception {
+        PomManager pomManager = new DefaultPomManager(new DefaultModelXmlFactory());
         String[] artifactIds = {"zulu", "alpha", "mike", "bravo", "yankee", "charlie", "xray", "delta", "whiskey"};
 
         StringBuilder generated = new StringBuilder();
@@ -98,15 +132,13 @@ public class TestPomManager {
         Files.write(
                 temporary, pom("<dependencies>" + generated + "</dependencies>").getBytes(StandardCharsets.UTF_8));
 
-        new DefaultPomManager().mergePoms(existing.toFile(), temporary.toFile());
+        pomManager.mergePoms(existing.toFile(), temporary.toFile());
 
-        Model merged = new org.apache.maven.model.io.xpp3.MavenXpp3Reader()
-                .read(Files.newBufferedReader(existing, StandardCharsets.UTF_8));
         List<String> actual = new ArrayList<>();
-        for (Dependency dependency : merged.getDependencies()) {
+        for (Dependency dependency : pomManager.readPom(existing.toFile()).getDependencies()) {
             actual.add(dependency.getArtifactId());
         }
-        assertEquals(java.util.Arrays.asList(artifactIds), actual);
+        assertEquals(Arrays.asList(artifactIds), actual);
     }
 
     private static String pom(String body) {

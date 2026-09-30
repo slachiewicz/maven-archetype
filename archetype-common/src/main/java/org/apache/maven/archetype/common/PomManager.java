@@ -25,9 +25,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
+import org.apache.maven.api.model.Model;
 import org.apache.maven.archetype.exception.InvalidPackaging;
 import org.apache.maven.archetype.old.ArchetypeTemplateProcessingException;
-import org.apache.maven.model.Model;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.xml.sax.SAXException;
 

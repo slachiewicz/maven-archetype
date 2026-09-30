@@ -18,10 +18,6 @@
  */
 package org.apache.maven.archetype.creator;
 
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
-
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -41,11 +37,28 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.function.UnaryOperator;
 
 import com.ibm.icu.text.CharsetDetector;
 import com.ibm.icu.text.CharsetMatch;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.maven.api.Project;
+import org.apache.maven.api.di.Inject;
+import org.apache.maven.api.di.Named;
+import org.apache.maven.api.di.Singleton;
+import org.apache.maven.api.model.Build;
+import org.apache.maven.api.model.BuildBase;
+import org.apache.maven.api.model.Dependency;
+import org.apache.maven.api.model.DependencyManagement;
+import org.apache.maven.api.model.Extension;
+import org.apache.maven.api.model.Model;
+import org.apache.maven.api.model.Parent;
+import org.apache.maven.api.model.Plugin;
+import org.apache.maven.api.model.PluginManagement;
+import org.apache.maven.api.model.Profile;
+import org.apache.maven.api.model.Resource;
+import org.apache.maven.api.xml.XmlNode;
 import org.apache.maven.archetype.ArchetypeCreationRequest;
 import org.apache.maven.archetype.ArchetypeCreationResult;
 import org.apache.maven.archetype.common.ArchetypeFilesResolver;
@@ -61,20 +74,11 @@ import org.apache.maven.archetype.metadata.RequiredProperty;
 import org.apache.maven.archetype.metadata.io.xpp3.ArchetypeDescriptorXpp3Writer;
 import org.apache.maven.executor.ExecutorRequest;
 import org.apache.maven.executor.ExecutorResult;
-import org.apache.maven.model.Build;
-import org.apache.maven.model.Dependency;
-import org.apache.maven.model.Extension;
-import org.apache.maven.model.Model;
-import org.apache.maven.model.Plugin;
-import org.apache.maven.model.Profile;
-import org.apache.maven.model.Resource;
-import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.DirectoryScanner;
 import org.codehaus.plexus.util.FileUtils;
 import org.codehaus.plexus.util.IOUtil;
 import org.codehaus.plexus.util.xml.XmlStreamReader;
 import org.codehaus.plexus.util.xml.XmlStreamWriter;
-import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -105,7 +109,7 @@ public class FilesetArchetypeCreator implements ArchetypeCreator {
     @Override
     @SuppressWarnings("checkstyle:MethodLength")
     public void createArchetype(ArchetypeCreationRequest request, ArchetypeCreationResult result) {
-        MavenProject project = request.getProject();
+        Project project = request.getProject();
         List<String> languages = request.getLanguages();
         List<String> filtereds = request.getFiltereds();
         String defaultEncoding = request.getDefaultEncoding();
@@ -113,7 +117,7 @@ public class FilesetArchetypeCreator implements ArchetypeCreator {
         boolean keepParent = request.isKeepParent();
         boolean partialArchetype = request.isPartialArchetype();
         File outputDirectory = request.getOutputDirectory();
-        File basedir = project.getBasedir();
+        File basedir = project.getBasedir().toFile();
 
         Properties properties = new Properties();
         Properties configurationProperties = new Properties();
@@ -147,10 +151,9 @@ public class FilesetArchetypeCreator implements ArchetypeCreator {
                     new File(archetypeResourcesDirectory, Constants.ARCHETYPE_POST_GENERATION_SCRIPT);
             archetypePostGenerationScript.getParentFile().mkdirs();
 
-            if (request.getProject().getBuild() != null
-                    && CollectionUtils.isNotEmpty(
-                            request.getProject().getBuild().getResources())) {
-                for (Resource resource : request.getProject().getBuild().getResources()) {
+            if (project.getBuild() != null
+                    && CollectionUtils.isNotEmpty(project.getBuild().getResources())) {
+                for (Resource resource : project.getBuild().getResources()) {
                     File inputFile = new File(
                             resource.getDirectory() + File.separator + Constants.ARCHETYPE_POST_GENERATION_SCRIPT);
                     if (inputFile.exists()) {
@@ -177,7 +180,7 @@ public class FilesetArchetypeCreator implements ArchetypeCreator {
 
             String packageName = configurationProperties.getProperty(Constants.PACKAGE);
 
-            Model pom = pomManager.readPom(project.getFile());
+            Model pom = pomManager.readPom(project.getPomPath().toFile());
 
             List<String> excludePatterns = configurationProperties.getProperty(Constants.EXCLUDE_PATTERNS) != null
                     ? Arrays.asList(configurationProperties
@@ -248,7 +251,7 @@ public class FilesetArchetypeCreator implements ArchetypeCreator {
                     configurationProperties.getProperty(Constants.ARTIFACT_ID),
                     archetypeFilesDirectory,
                     basedir,
-                    project.getFile(),
+                    project.getPomPath().toFile(),
                     pomReversedProperties,
                     preserveCData,
                     keepParent);
@@ -353,7 +356,7 @@ public class FilesetArchetypeCreator implements ArchetypeCreator {
     }
 
     private void extractPropertiesFromProject(
-            MavenProject project, Properties properties, Properties configurationProperties, String packageName) {
+            Project project, Properties properties, Properties configurationProperties, String packageName) {
         if (!properties.containsKey(Constants.GROUP_ID)) {
             properties.setProperty(Constants.GROUP_ID, project.getGroupId());
         }
@@ -380,25 +383,25 @@ public class FilesetArchetypeCreator implements ArchetypeCreator {
     /**
      * Create the archetype project pom.xml file, that will be used to build the archetype.
      */
-    private File createArchetypeProjectPom(MavenProject project, Properties configurationProperties, File projectDir)
+    private File createArchetypeProjectPom(Project project, Properties configurationProperties, File projectDir)
             throws IOException {
-        Model model = new Model();
-        model.setModelVersion("4.0.0");
+        Model projectModel = project.getModel();
+
+        Model.Builder model = Model.newBuilder(false);
+        model.modelVersion("4.0.0");
         // these values should be retrieved from the request with sensible defaults
-        model.setGroupId(configurationProperties.getProperty(Constants.ARCHETYPE_GROUP_ID, project.getGroupId()));
-        model.setArtifactId(
-                configurationProperties.getProperty(Constants.ARCHETYPE_ARTIFACT_ID, project.getArtifactId()));
-        model.setVersion(configurationProperties.getProperty(Constants.ARCHETYPE_VERSION, project.getVersion()));
-        model.setPackaging("maven-archetype");
-        model.setName(configurationProperties.getProperty(Constants.ARCHETYPE_ARTIFACT_ID, project.getArtifactId()));
-        model.setUrl(configurationProperties.getProperty(Constants.ARCHETYPE_URL, project.getUrl()));
-        model.setDescription(
-                configurationProperties.getProperty(Constants.ARCHETYPE_DESCRIPTION, project.getDescription()));
-        model.setLicenses(project.getLicenses());
-        model.setDevelopers(project.getDevelopers());
-        model.setScm(project.getScm());
-        Build build = new Build();
-        model.setBuild(build);
+        model.groupId(configurationProperties.getProperty(Constants.ARCHETYPE_GROUP_ID, project.getGroupId()));
+        model.artifactId(configurationProperties.getProperty(Constants.ARCHETYPE_ARTIFACT_ID, project.getArtifactId()));
+        model.version(configurationProperties.getProperty(Constants.ARCHETYPE_VERSION, project.getVersion()));
+        model.packaging("maven-archetype");
+        model.name(configurationProperties.getProperty(Constants.ARCHETYPE_ARTIFACT_ID, project.getArtifactId()));
+        model.url(configurationProperties.getProperty(Constants.ARCHETYPE_URL, projectModel.getUrl()));
+        model.description(
+                configurationProperties.getProperty(Constants.ARCHETYPE_DESCRIPTION, projectModel.getDescription()));
+        model.licenses(projectModel.getLicenses());
+        model.developers(projectModel.getDevelopers());
+        model.scm(projectModel.getScm());
+        List<Extension> extensions = new ArrayList<>();
 
         // In many cases where we are behind a firewall making Archetypes for work mates we want
         // to simply be able to deploy the archetypes once we have created them. In order to do
@@ -408,25 +411,24 @@ public class FilesetArchetypeCreator implements ArchetypeCreator {
         // We don't want to create archetypes that cannot be deployed after we create them. People
         // might want to edit the archetype POM but they should not have too.
 
-        if (project.getParent() != null) {
-            MavenProject p = project.getParent();
+        if (project.getParent().isPresent()) {
+            Model parentModel = project.getParent().get().getModel();
 
-            if (p.getDistributionManagement() != null) {
-                model.setDistributionManagement(p.getDistributionManagement());
+            if (parentModel.getDistributionManagement() != null) {
+                model.distributionManagement(parentModel.getDistributionManagement());
             }
 
-            if (p.getBuildExtensions() != null) {
-                for (Extension be : p.getBuildExtensions()) {
-                    model.getBuild().addExtension(be);
-                }
+            if (parentModel.getBuild() != null) {
+                extensions.addAll(parentModel.getBuild().getExtensions());
             }
         }
 
-        Extension extension = new Extension();
-        extension.setGroupId("org.apache.maven.archetype");
-        extension.setArtifactId("archetype-packaging");
-        extension.setVersion(getArchetypeVersion());
-        model.getBuild().addExtension(extension);
+        extensions.add(Extension.newBuilder(false)
+                .groupId("org.apache.maven.archetype")
+                .artifactId("archetype-packaging")
+                .version(getArchetypeVersion())
+                .build());
+        model.build(Build.newBuilder(false).extensions(extensions).build());
 
         LOGGER.debug("Creating archetype's pom");
 
@@ -436,7 +438,7 @@ public class FilesetArchetypeCreator implements ArchetypeCreator {
 
         copyResource("pom-prototype.xml", archetypePomFile);
 
-        pomManager.writePom(model, archetypePomFile, archetypePomFile);
+        pomManager.writePom(model.build(), archetypePomFile, archetypePomFile);
 
         return archetypePomFile;
     }
@@ -565,163 +567,171 @@ public class FilesetArchetypeCreator implements ArchetypeCreator {
         return StringUtils.replace(aPackage, ".", "/");
     }
 
-    private void rewriteReferences(Model pom, String rootArtifactId, String groupId) {
+    private Model rewriteReferences(Model pom, String rootArtifactId, String groupId) {
+        Model.Builder rewritten = Model.newBuilder(pom);
+
         // rewrite Dependencies
-        if (pom.getDependencies() != null && !pom.getDependencies().isEmpty()) {
-            for (Dependency dependency : pom.getDependencies()) {
-                rewriteDependencyReferences(dependency, rootArtifactId, groupId);
-            }
-        }
+        rewritten.dependencies(rewriteDependencies(pom.getDependencies(), rootArtifactId, groupId));
 
         // rewrite DependencyManagement
-        if (pom.getDependencyManagement() != null
-                && pom.getDependencyManagement().getDependencies() != null
-                && !pom.getDependencyManagement().getDependencies().isEmpty()) {
-            for (Dependency dependency : pom.getDependencyManagement().getDependencies()) {
-                rewriteDependencyReferences(dependency, rootArtifactId, groupId);
-            }
-        }
+        rewritten.dependencyManagement(
+                rewriteDependencyManagement(pom.getDependencyManagement(), rootArtifactId, groupId));
 
-        // rewrite Plugins
-        if (pom.getBuild() != null
-                && pom.getBuild().getPlugins() != null
-                && !pom.getBuild().getPlugins().isEmpty()) {
-            for (Plugin plugin : pom.getBuild().getPlugins()) {
-                rewritePluginReferences(plugin, rootArtifactId, groupId);
-            }
-        }
-
-        // rewrite PluginManagement
-        if (pom.getBuild() != null
-                && pom.getBuild().getPluginManagement() != null
-                && pom.getBuild().getPluginManagement().getPlugins() != null
-                && !pom.getBuild().getPluginManagement().getPlugins().isEmpty()) {
-            for (Plugin plugin : pom.getBuild().getPluginManagement().getPlugins()) {
-                rewritePluginReferences(plugin, rootArtifactId, groupId);
-            }
+        // rewrite Plugins and PluginManagement
+        if (pom.getBuild() != null) {
+            rewritten.build(rewriteBuild(pom.getBuild(), rootArtifactId, groupId));
         }
 
         // rewrite Profiles
-        if (pom.getProfiles() != null) {
-            for (Profile profile : pom.getProfiles()) {
-                // rewrite Dependencies
-                if (profile.getDependencies() != null
-                        && !profile.getDependencies().isEmpty()) {
-                    for (Dependency dependency : profile.getDependencies()) {
-                        rewriteDependencyReferences(dependency, rootArtifactId, groupId);
-                    }
-                }
+        List<Profile> profiles = new ArrayList<>();
+        for (Profile profile : pom.getProfiles()) {
+            Profile.Builder rewrittenProfile = Profile.newBuilder(profile);
 
-                // rewrite DependencyManagement
-                if (profile.getDependencyManagement() != null
-                        && profile.getDependencyManagement().getDependencies() != null
-                        && !profile.getDependencyManagement().getDependencies().isEmpty()) {
-                    for (Dependency dependency :
-                            profile.getDependencyManagement().getDependencies()) {
-                        rewriteDependencyReferences(dependency, rootArtifactId, groupId);
-                    }
-                }
-
-                // rewrite Plugins
-                if (profile.getBuild() != null
-                        && profile.getBuild().getPlugins() != null
-                        && !profile.getBuild().getPlugins().isEmpty()) {
-                    for (Plugin plugin : profile.getBuild().getPlugins()) {
-                        rewritePluginReferences(plugin, rootArtifactId, groupId);
-                    }
-                }
-
-                // rewrite PluginManagement
-                if (profile.getBuild() != null
-                        && profile.getBuild().getPluginManagement() != null
-                        && profile.getBuild().getPluginManagement().getPlugins() != null
-                        && !profile.getBuild()
-                                .getPluginManagement()
-                                .getPlugins()
-                                .isEmpty()) {
-                    for (Plugin plugin :
-                            profile.getBuild().getPluginManagement().getPlugins()) {
-                        rewritePluginReferences(plugin, rootArtifactId, groupId);
-                    }
-                }
+            rewrittenProfile.dependencies(rewriteDependencies(profile.getDependencies(), rootArtifactId, groupId));
+            rewrittenProfile.dependencyManagement(
+                    rewriteDependencyManagement(profile.getDependencyManagement(), rootArtifactId, groupId));
+            if (profile.getBuild() != null) {
+                rewrittenProfile.build(rewriteBuild(profile.getBuild(), rootArtifactId, groupId));
             }
+
+            profiles.add(rewrittenProfile.build());
         }
+        rewritten.profiles(profiles);
+
+        return rewritten.build();
     }
 
-    private void rewriteDependencyReferences(Dependency dependency, String rootArtifactId, String groupId) {
+    private <T extends BuildBase> T rewriteBuild(T build, String rootArtifactId, String groupId) {
+        BuildBase rewritten = build.withPlugins(rewritePlugins(build.getPlugins(), rootArtifactId, groupId));
+        PluginManagement pluginManagement = build.getPluginManagement();
+        if (pluginManagement != null) {
+            rewritten = rewritten.withPluginManagement(pluginManagement.withPlugins(
+                    rewritePlugins(pluginManagement.getPlugins(), rootArtifactId, groupId)));
+        }
+        @SuppressWarnings("unchecked")
+        T result = (T) rewritten;
+        return result;
+    }
+
+    private DependencyManagement rewriteDependencyManagement(
+            DependencyManagement dependencyManagement, String rootArtifactId, String groupId) {
+        if (dependencyManagement == null) {
+            return null;
+        }
+        return dependencyManagement.withDependencies(
+                rewriteDependencies(dependencyManagement.getDependencies(), rootArtifactId, groupId));
+    }
+
+    private List<Dependency> rewriteDependencies(List<Dependency> dependencies, String rootArtifactId, String groupId) {
+        List<Dependency> rewritten = new ArrayList<>(dependencies.size());
+        for (Dependency dependency : dependencies) {
+            rewritten.add(rewriteDependencyReferences(dependency, rootArtifactId, groupId));
+        }
+        return rewritten;
+    }
+
+    private List<Plugin> rewritePlugins(List<Plugin> plugins, String rootArtifactId, String groupId) {
+        List<Plugin> rewritten = new ArrayList<>(plugins.size());
+        for (Plugin plugin : plugins) {
+            rewritten.add(rewritePluginReferences(plugin, rootArtifactId, groupId));
+        }
+        return rewritten;
+    }
+
+    private Dependency rewriteDependencyReferences(Dependency dependency, String rootArtifactId, String groupId) {
         if (dependency.getArtifactId() != null && dependency.getArtifactId().indexOf(rootArtifactId) >= 0) {
+            Dependency.Builder rewritten = Dependency.newBuilder(dependency);
+
             if (dependency.getGroupId() != null) {
-                dependency.setGroupId(
+                rewritten.groupId(
                         StringUtils.replace(dependency.getGroupId(), groupId, "${" + Constants.GROUP_ID + "}"));
             }
 
-            dependency.setArtifactId(
-                    StringUtils.replace(dependency.getArtifactId(), rootArtifactId, "${rootArtifactId}"));
+            rewritten.artifactId(StringUtils.replace(dependency.getArtifactId(), rootArtifactId, "${rootArtifactId}"));
 
             if (dependency.getVersion() != null) {
-                dependency.setVersion("${" + Constants.VERSION + "}");
+                rewritten.version("${" + Constants.VERSION + "}");
             }
+            return rewritten.build();
         }
+        return dependency;
     }
 
-    private void rewritePluginReferences(Plugin plugin, String rootArtifactId, String groupId) {
+    private Plugin rewritePluginReferences(Plugin plugin, String rootArtifactId, String groupId) {
         if (plugin.getArtifactId() != null && plugin.getArtifactId().indexOf(rootArtifactId) >= 0) {
+            Plugin.Builder rewritten = Plugin.newBuilder(plugin);
+
             if (plugin.getGroupId() != null) {
-                String g = StringUtils.replace(plugin.getGroupId(), groupId, "${" + Constants.GROUP_ID + "}");
-                plugin.setGroupId(g);
+                rewritten.groupId(StringUtils.replace(plugin.getGroupId(), groupId, "${" + Constants.GROUP_ID + "}"));
             }
 
-            plugin.setArtifactId(StringUtils.replace(plugin.getArtifactId(), rootArtifactId, "${rootArtifactId}"));
+            rewritten.artifactId(StringUtils.replace(plugin.getArtifactId(), rootArtifactId, "${rootArtifactId}"));
 
             if (plugin.getVersion() != null) {
-                plugin.setVersion("${" + Constants.VERSION + "}");
+                rewritten.version("${" + Constants.VERSION + "}");
             }
+            plugin = rewritten.build();
         }
 
         if (plugin.getArtifactId() != null && "maven-ear-plugin".equals(plugin.getArtifactId())) {
-            rewriteEARPluginReferences(plugin, rootArtifactId, groupId);
+            plugin = rewriteEARPluginReferences(plugin, rootArtifactId, groupId);
         }
+        return plugin;
     }
 
-    private void rewriteEARPluginReferences(Plugin plugin, String rootArtifactId, String groupId) {
-        Xpp3Dom configuration = (Xpp3Dom) plugin.getConfiguration();
-        if (configuration != null) {
-            Xpp3Dom modulesConfiguration = configuration.getChild("modules");
-            Xpp3Dom[] modules = modulesConfiguration != null ? modulesConfiguration.getChildren() : new Xpp3Dom[0];
-            for (int i = 0; i < modules.length; i++) {
-                Xpp3Dom module = modules[i];
-                Xpp3Dom moduleGroupId = module.getChild("groupId");
-                Xpp3Dom moduleArtifactId = module.getChild("artifactId");
-                Xpp3Dom moduleBundleFileName = module.getChild("bundleFileName");
-                Xpp3Dom moduleModuleId = module.getChild("moduleId");
-                Xpp3Dom moduleContextRoot = module.getChild("contextRoot");
+    private Plugin rewriteEARPluginReferences(Plugin plugin, String rootArtifactId, String groupId) {
+        XmlNode configuration = plugin.getConfiguration();
+        if (configuration == null || configuration.getChild("modules") == null) {
+            return plugin;
+        }
 
-                if (moduleGroupId != null) {
-                    moduleGroupId.setValue(
-                            StringUtils.replace(moduleGroupId.getValue(), groupId, "${" + Constants.GROUP_ID + "}"));
-                }
+        XmlNode modulesConfiguration = configuration.getChild("modules");
+        List<XmlNode> modules = new ArrayList<>();
+        for (XmlNode module : modulesConfiguration.getChildren()) {
+            modules.add(replaceValues(
+                    module,
+                    Map.of(
+                            "groupId", value -> StringUtils.replace(value, groupId, "${" + Constants.GROUP_ID + "}"),
+                            "artifactId", value -> StringUtils.replace(value, rootArtifactId, "${rootArtifactId}"),
+                            "bundleFileName", value -> StringUtils.replace(value, rootArtifactId, "${rootArtifactId}"),
+                            "moduleId", value -> StringUtils.replace(value, rootArtifactId, "${rootArtifactId}"),
+                            "contextRoot", value -> StringUtils.replace(value, rootArtifactId, "${rootArtifactId}"))));
+        }
 
-                if (moduleArtifactId != null) {
-                    moduleArtifactId.setValue(
-                            StringUtils.replace(moduleArtifactId.getValue(), rootArtifactId, "${rootArtifactId}"));
-                }
-
-                if (moduleBundleFileName != null) {
-                    moduleBundleFileName.setValue(
-                            StringUtils.replace(moduleBundleFileName.getValue(), rootArtifactId, "${rootArtifactId}"));
-                }
-
-                if (moduleModuleId != null) {
-                    moduleModuleId.setValue(
-                            StringUtils.replace(moduleModuleId.getValue(), rootArtifactId, "${rootArtifactId}"));
-                }
-
-                if (moduleContextRoot != null) {
-                    moduleContextRoot.setValue(
-                            StringUtils.replace(moduleContextRoot.getValue(), rootArtifactId, "${rootArtifactId}"));
-                }
+        List<XmlNode> children = new ArrayList<>();
+        boolean replaced = false;
+        for (XmlNode child : configuration.getChildren()) {
+            if (!replaced && "modules".equals(child.getName())) {
+                children.add(copyWithChildren(child, modules));
+                replaced = true;
+            } else {
+                children.add(child);
             }
         }
+        return plugin.withConfiguration(copyWithChildren(configuration, children));
+    }
+
+    /** Replaces the value of the direct children of the node whose name is a key of the given map. */
+    private XmlNode replaceValues(XmlNode node, Map<String, UnaryOperator<String>> replacements) {
+        List<XmlNode> children = new ArrayList<>();
+        for (XmlNode child : node.getChildren()) {
+            UnaryOperator<String> replacement = replacements.get(child.getName());
+            children.add(
+                    replacement == null
+                            ? child
+                            : XmlNode.newInstance(
+                                    child.getName(),
+                                    replacement.apply(child.getValue()),
+                                    child.getAttributes(),
+                                    child.getChildren(),
+                                    child.getInputLocation()));
+        }
+        return copyWithChildren(node, children);
+    }
+
+    private XmlNode copyWithChildren(XmlNode node, List<XmlNode> children) {
+        return XmlNode.newInstance(
+                node.getName(), node.getValue(), node.getAttributes(), children, node.getInputLocation());
     }
 
     private void setArtifactId(Properties properties, String artifactId) {
@@ -858,24 +868,27 @@ public class FilesetArchetypeCreator implements ArchetypeCreator {
 
             inputFile.delete();
         } else {
+            // forceCopy: a builder based on a model cannot clear a value
+            Model.Builder archetypePom = Model.newBuilder(pom, true);
             if (!keepParent) {
-                pom.setParent(null);
+                archetypePom.parent(null);
             }
 
-            pom.setModules(null);
-            pom.setGroupId("${" + Constants.GROUP_ID + "}");
-            pom.setArtifactId("${" + Constants.ARTIFACT_ID + "}");
-            pom.setVersion("${" + Constants.VERSION + "}");
-            pom.setName(getReversedPlainContent(pom.getName(), pomReversedProperties));
-            pom.setDescription(getReversedPlainContent(pom.getDescription(), pomReversedProperties));
-            pom.setUrl(getReversedPlainContent(pom.getUrl(), pomReversedProperties));
+            archetypePom.modules(null);
+            archetypePom.groupId("${" + Constants.GROUP_ID + "}");
+            archetypePom.artifactId("${" + Constants.ARTIFACT_ID + "}");
+            archetypePom.version("${" + Constants.VERSION + "}");
+            archetypePom.name(getReversedPlainContent(pom.getName(), pomReversedProperties));
+            archetypePom.description(getReversedPlainContent(pom.getDescription(), pomReversedProperties));
+            archetypePom.url(getReversedPlainContent(pom.getUrl(), pomReversedProperties));
 
-            rewriteReferences(
-                    pom,
-                    pomReversedProperties.getProperty(Constants.ARTIFACT_ID),
-                    pomReversedProperties.getProperty(Constants.GROUP_ID));
-
-            pomManager.writePom(pom, outputFile, initialPomFile);
+            pomManager.writePom(
+                    rewriteReferences(
+                            archetypePom.build(),
+                            pomReversedProperties.getProperty(Constants.ARTIFACT_ID),
+                            pomReversedProperties.getProperty(Constants.GROUP_ID)),
+                    outputFile,
+                    initialPomFile);
         }
 
         try (Reader in = new XmlStreamReader(initialPomFile)) {
@@ -1081,44 +1094,48 @@ public class FilesetArchetypeCreator implements ArchetypeCreator {
 
             inputFile.delete();
         } else {
+            // forceCopy: a builder based on a model cannot clear a value
+            Model.Builder modulePom = Model.newBuilder(pom, true);
             if (pom.getParent() != null) {
-                pom.getParent()
-                        .setGroupId(StringUtils.replace(
-                                pom.getParent().getGroupId(),
-                                pomReversedProperties.getProperty(Constants.GROUP_ID),
-                                "${" + Constants.GROUP_ID + "}"));
+                Parent.Builder parent = Parent.newBuilder(pom.getParent());
+                parent.groupId(StringUtils.replace(
+                        pom.getParent().getGroupId(),
+                        pomReversedProperties.getProperty(Constants.GROUP_ID),
+                        "${" + Constants.GROUP_ID + "}"));
                 if (pom.getParent().getArtifactId() != null
                         && pom.getParent().getArtifactId().indexOf(rootArtifactId) >= 0) {
-                    pom.getParent()
-                            .setArtifactId(StringUtils.replace(
-                                    pom.getParent().getArtifactId(), rootArtifactId, "${rootArtifactId}"));
+                    parent.artifactId(
+                            StringUtils.replace(pom.getParent().getArtifactId(), rootArtifactId, "${rootArtifactId}"));
                 }
                 if (pom.getParent().getVersion() != null) {
-                    pom.getParent().setVersion("${" + Constants.VERSION + "}");
+                    parent.version("${" + Constants.VERSION + "}");
                 }
+                modulePom.parent(parent.build());
             }
-            pom.setModules(null);
+            modulePom.modules(null);
 
             if (pom.getGroupId() != null) {
-                pom.setGroupId(StringUtils.replace(
+                modulePom.groupId(StringUtils.replace(
                         pom.getGroupId(),
                         pomReversedProperties.getProperty(Constants.GROUP_ID),
                         "${" + Constants.GROUP_ID + "}"));
             }
 
-            pom.setArtifactId("${" + Constants.ARTIFACT_ID + "}");
+            modulePom.artifactId("${" + Constants.ARTIFACT_ID + "}");
 
             if (pom.getVersion() != null) {
-                pom.setVersion("${" + Constants.VERSION + "}");
+                modulePom.version("${" + Constants.VERSION + "}");
             }
 
-            pom.setName(getReversedPlainContent(pom.getName(), pomReversedProperties));
-            pom.setDescription(getReversedPlainContent(pom.getDescription(), pomReversedProperties));
-            pom.setUrl(getReversedPlainContent(pom.getUrl(), pomReversedProperties));
+            modulePom.name(getReversedPlainContent(pom.getName(), pomReversedProperties));
+            modulePom.description(getReversedPlainContent(pom.getDescription(), pomReversedProperties));
+            modulePom.url(getReversedPlainContent(pom.getUrl(), pomReversedProperties));
 
-            rewriteReferences(pom, rootArtifactId, pomReversedProperties.getProperty(Constants.GROUP_ID));
-
-            pomManager.writePom(pom, outputFile, initialPomFile);
+            pomManager.writePom(
+                    rewriteReferences(
+                            modulePom.build(), rootArtifactId, pomReversedProperties.getProperty(Constants.GROUP_ID)),
+                    outputFile,
+                    initialPomFile);
         }
 
         try (Reader in = new XmlStreamReader(initialPomFile)) {

@@ -18,10 +18,6 @@
  */
 package org.apache.maven.archetype.common;
 
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -40,16 +36,19 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.maven.api.RemoteRepository;
+import org.apache.maven.api.Session;
+import org.apache.maven.api.di.Inject;
+import org.apache.maven.api.di.Named;
+import org.apache.maven.api.di.Singleton;
+import org.apache.maven.api.model.Model;
 import org.apache.maven.archetype.downloader.DownloadException;
 import org.apache.maven.archetype.downloader.Downloader;
 import org.apache.maven.archetype.exception.UnknownArchetype;
 import org.apache.maven.archetype.metadata.ArchetypeDescriptor;
 import org.apache.maven.archetype.metadata.io.xpp3.ArchetypeDescriptorXpp3Reader;
 import org.apache.maven.archetype.old.descriptor.ArchetypeDescriptorBuilder;
-import org.apache.maven.model.Model;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
-import org.eclipse.aether.RepositorySystemSession;
-import org.eclipse.aether.repository.RemoteRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,7 +71,7 @@ public class DefaultArchetypeArtifactManager implements ArchetypeArtifactManager
             final String artifactId,
             final String version,
             final List<RemoteRepository> repositories,
-            RepositorySystemSession repositorySystemSession)
+            Session repositorySystemSession)
             throws UnknownArchetype {
         try {
             File archetype = getArchetype(groupId, artifactId, version);
@@ -169,7 +168,7 @@ public class DefaultArchetypeArtifactManager implements ArchetypeArtifactManager
             String archetypeArtifactId,
             String archetypeVersion,
             List<RemoteRepository> remoteRepositories,
-            RepositorySystemSession repositorySystemSession) {
+            Session repositorySystemSession) {
         try {
             File archetype = getArchetype(archetypeGroupId, archetypeArtifactId, archetypeVersion);
             if (archetype == null) {

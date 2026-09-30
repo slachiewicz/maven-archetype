@@ -18,40 +18,33 @@
  */
 package org.apache.maven.archetype.test;
 
-import javax.inject.Inject;
-
 import java.io.File;
 import java.util.Properties;
 
+import org.apache.maven.api.Session;
+import org.apache.maven.api.di.Inject;
+import org.apache.maven.api.di.testing.MavenDITest;
 import org.apache.maven.archetype.ArchetypeGenerationRequest;
 import org.apache.maven.archetype.ArchetypeGenerationResult;
 import org.apache.maven.archetype.ArchetypeManager;
 import org.apache.maven.archetype.catalog.Archetype;
 import org.apache.maven.archetype.catalog.ArchetypeCatalog;
-import org.codehaus.plexus.testing.PlexusTest;
 import org.codehaus.plexus.util.FileUtils;
-import org.eclipse.aether.DefaultRepositorySystemSession;
-import org.eclipse.aether.RepositorySystem;
-import org.eclipse.aether.repository.LocalRepository;
-import org.eclipse.aether.repository.LocalRepositoryManager;
 import org.junit.jupiter.api.Test;
 
-import static org.codehaus.plexus.testing.PlexusExtension.getBasedir;
+import static org.apache.maven.testing.di.MavenDIExtension.getBasedir;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  *
  * @author rafale
  */
-@PlexusTest
+@MavenDITest
 public class InternalCatalogArchetypesVerificationTest {
     private static final String CENTRAL = "https://repo.maven.apache.org/maven2";
 
     @Inject
     private ArchetypeManager archetypeManager;
-
-    @Inject
-    private RepositorySystem repositorySystem;
 
     @Test
     public void testInternalCatalog() throws Exception {
@@ -73,10 +66,7 @@ public class InternalCatalogArchetypesVerificationTest {
             // this should be also default ...
             archetype.setRepository(CENTRAL);
 
-            DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
-            LocalRepositoryManager localRepositoryManager = repositorySystem.newLocalRepositoryManager(
-                    repositorySession, new LocalRepository("target/test-classes/repositories/local"));
-            repositorySession.setLocalRepositoryManager(localRepositoryManager);
+            Session session = TestSessions.create(new File("target/test-classes/repositories/local"));
 
             ArchetypeGenerationRequest request = new ArchetypeGenerationRequest(archetype)
                     .setGroupId("org.apache.maven.archetype.test")
@@ -85,7 +75,7 @@ public class InternalCatalogArchetypesVerificationTest {
                     .setPackage("com.acme")
                     .setProperties(props)
                     .setOutputDirectory(outputDirectory.getPath())
-                    .setRepositorySession(repositorySession);
+                    .setSession(session);
 
             ArchetypeGenerationResult generationResult = archetypeManager.generateProjectFromArchetype(request);
 

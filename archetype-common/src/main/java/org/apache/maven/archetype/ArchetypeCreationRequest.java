@@ -23,7 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
-import org.apache.maven.project.MavenProject;
+import org.apache.maven.api.Project;
 
 /**
  * @author Jason van Zyl
@@ -32,7 +32,7 @@ public class ArchetypeCreationRequest {
 
     private File localRepositoryBasedir;
 
-    private MavenProject project;
+    private Project project;
 
     private List<String> languages = new ArrayList<>();
 
@@ -74,11 +74,11 @@ public class ArchetypeCreationRequest {
         return this;
     }
 
-    public MavenProject getProject() {
+    public Project getProject() {
         return project;
     }
 
-    public ArchetypeCreationRequest setProject(MavenProject project) {
+    public ArchetypeCreationRequest setProject(Project project) {
         this.project = project;
         return this;
     }

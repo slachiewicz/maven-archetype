@@ -18,21 +18,20 @@
  */
 package org.apache.maven.archetype.repositorycrawler;
 
-import javax.inject.Inject;
-
 import java.io.File;
 
+import org.apache.maven.api.di.Inject;
+import org.apache.maven.api.di.testing.MavenDITest;
 import org.apache.maven.archetype.catalog.ArchetypeCatalog;
-import org.codehaus.plexus.testing.PlexusTest;
 import org.junit.jupiter.api.Test;
 
-import static org.codehaus.plexus.testing.PlexusExtension.getTestFile;
+import static org.apache.maven.testing.di.MavenDIExtension.getTestFile;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author rafale
  */
-@PlexusTest
+@MavenDITest
 public class DefaultRepositoryCrawlerTest {
 
     @Inject

@@ -18,38 +18,26 @@
  */
 package org.apache.maven.archetype.source;
 
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
-
 import java.io.File;
 import java.io.IOException;
-import java.util.Collections;
+import java.io.StringReader;
+import java.net.URI;
 import java.util.List;
+import java.util.Optional;
 
+import org.apache.maven.api.RemoteRepository;
+import org.apache.maven.api.Session;
+import org.apache.maven.api.di.Named;
+import org.apache.maven.api.di.Singleton;
+import org.apache.maven.api.services.MavenException;
+import org.apache.maven.api.services.Transport;
+import org.apache.maven.api.services.TransportProvider;
 import org.apache.maven.archetype.catalog.Archetype;
 import org.apache.maven.archetype.catalog.ArchetypeCatalog;
-import org.codehaus.plexus.util.xml.XmlStreamReader;
-import org.eclipse.aether.RepositorySystem;
-import org.eclipse.aether.RepositorySystemSession;
-import org.eclipse.aether.metadata.DefaultMetadata;
-import org.eclipse.aether.metadata.Metadata;
-import org.eclipse.aether.repository.RemoteRepository;
-import org.eclipse.aether.resolution.MetadataRequest;
-import org.eclipse.aether.resolution.MetadataResult;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-/**
- * @author Jason van Zyl
- */
 @Named("remote-catalog")
 @Singleton
 public class RemoteCatalogArchetypeDataSource extends CatalogArchetypeDataSource implements ArchetypeDataSource {
-    private static final Logger LOGGER = LoggerFactory.getLogger(RemoteCatalogArchetypeDataSource.class);
-
-    @Inject
-    private RepositorySystem repositorySystem;
 
     /**
      * Id of the repository used to download catalog file. Proxy or authentication info can
@@ -60,27 +48,26 @@ public class RemoteCatalogArchetypeDataSource extends CatalogArchetypeDataSource
     public static final String CENTRAL_REPOSITORY_ID = "central";
 
     @Override
-    public ArchetypeCatalog getArchetypeCatalog(
-            RepositorySystemSession repositorySession, List<RemoteRepository> remoteRepositories)
+    public ArchetypeCatalog getArchetypeCatalog(Session session, List<RemoteRepository> remoteRepositories)
             throws ArchetypeDataSourceException {
 
-        MetadataRequest request = new MetadataRequest();
-        request.setRepository(getRemoteRepo(remoteRepositories));
-        request.setMetadata(new DefaultMetadata(ARCHETYPE_CATALOG_FILENAME, Metadata.Nature.RELEASE));
+        RemoteRepository repository = getRemoteRepo(remoteRepositories);
+        if (repository == null) {
+            throw new ArchetypeDataSourceException(
+                    "No remote repository found to download " + ARCHETYPE_CATALOG_FILENAME);
+        }
 
-        MetadataResult metadataResult = repositorySystem
-                .resolveMetadata(repositorySession, Collections.singletonList(request))
-                .get(0);
-
-        if (metadataResult.isResolved()) {
-            try {
-                return readCatalog(
-                        new XmlStreamReader(metadataResult.getMetadata().getFile()));
-            } catch (IOException e) {
-                throw new ArchetypeDataSourceException(e);
+        // the Maven 4 API has no metadata resolution: the catalog is fetched directly, without the local
+        // repository cache, update policy and checksum verification the Maven 3 resolver applied
+        try (Transport transport = session.getService(TransportProvider.class).transport(session, repository)) {
+            Optional<String> catalog = transport.getString(URI.create(ARCHETYPE_CATALOG_FILENAME));
+            if (!catalog.isPresent()) {
+                throw new ArchetypeDataSourceException(
+                        ARCHETYPE_CATALOG_FILENAME + " not found in repository " + repository.getId());
             }
-        } else {
-            throw new ArchetypeDataSourceException(metadataResult.getException());
+            return readCatalog(new StringReader(catalog.get()));
+        } catch (IOException | MavenException e) {
+            throw new ArchetypeDataSourceException(e);
         }
     }
 
@@ -98,18 +85,13 @@ public class RemoteCatalogArchetypeDataSource extends CatalogArchetypeDataSource
             if (CENTRAL_REPOSITORY_ID.equals(remoteRepository.getId())) {
                 return remoteRepository;
             }
-
-            if (getRemoteRepo(remoteRepository.getMirroredRepositories()) != null) {
-                return remoteRepository;
-            }
         }
 
         return null;
     }
 
     @Override
-    public File updateCatalog(RepositorySystemSession repositorySession, Archetype archetype)
-            throws ArchetypeDataSourceException {
+    public File updateCatalog(Session session, Archetype archetype) throws ArchetypeDataSourceException {
         throw new ArchetypeDataSourceException("Not supported yet.");
     }
 }

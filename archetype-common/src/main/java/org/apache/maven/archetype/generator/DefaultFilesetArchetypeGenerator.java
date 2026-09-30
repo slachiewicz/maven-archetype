@@ -18,9 +18,6 @@
  */
 package org.apache.maven.archetype.generator;
 
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
 
@@ -44,7 +41,11 @@ import java.util.zip.ZipFile;
 
 import groovy.lang.Binding;
 import groovy.lang.GroovyShell;
+import org.apache.maven.api.di.Inject;
+import org.apache.maven.api.di.Named;
+import org.apache.maven.api.di.Singleton;
 import org.apache.maven.archetype.ArchetypeGenerationRequest;
+import org.apache.maven.archetype.ArchetypeVelocity;
 import org.apache.maven.archetype.common.ArchetypeArtifactManager;
 import org.apache.maven.archetype.common.ArchetypeFilesResolver;
 import org.apache.maven.archetype.common.Constants;
@@ -67,7 +68,6 @@ import org.codehaus.plexus.util.FileUtils;
 import org.codehaus.plexus.util.IOUtil;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
-import org.codehaus.plexus.velocity.VelocityComponent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
@@ -83,14 +83,14 @@ public class DefaultFilesetArchetypeGenerator implements FilesetArchetypeGenerat
 
     private PomManager pomManager;
 
-    private VelocityComponent velocity;
+    private ArchetypeVelocity velocity;
 
     @Inject
     public DefaultFilesetArchetypeGenerator(
             ArchetypeArtifactManager archetypeArtifactManager,
             ArchetypeFilesResolver archetypeFilesResolver,
             PomManager pomManager,
-            VelocityComponent velocity) {
+            ArchetypeVelocity velocity) {
         this.archetypeArtifactManager = archetypeArtifactManager;
         this.archetypeFilesResolver = archetypeFilesResolver;
         this.pomManager = pomManager;

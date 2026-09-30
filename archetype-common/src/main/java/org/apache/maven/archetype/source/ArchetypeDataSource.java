@@ -21,10 +21,10 @@ package org.apache.maven.archetype.source;
 import java.io.File;
 import java.util.List;
 
+import org.apache.maven.api.RemoteRepository;
+import org.apache.maven.api.Session;
 import org.apache.maven.archetype.catalog.Archetype;
 import org.apache.maven.archetype.catalog.ArchetypeCatalog;
-import org.eclipse.aether.RepositorySystemSession;
-import org.eclipse.aether.repository.RemoteRepository;
 
 /**
  * Sources we can get Archetypes from. This may be the local registry, a Wiki, or,
@@ -38,10 +38,8 @@ import org.eclipse.aether.repository.RemoteRepository;
 public interface ArchetypeDataSource {
     String ARCHETYPE_CATALOG_FILENAME = "archetype-catalog.xml";
 
-    ArchetypeCatalog getArchetypeCatalog(
-            RepositorySystemSession repositorySession, List<RemoteRepository> remoteRepositories)
+    ArchetypeCatalog getArchetypeCatalog(Session repositorySession, List<RemoteRepository> remoteRepositories)
             throws ArchetypeDataSourceException;
 
-    File updateCatalog(RepositorySystemSession repositorySession, Archetype archetype)
-            throws ArchetypeDataSourceException;
+    File updateCatalog(Session repositorySession, Archetype archetype) throws ArchetypeDataSourceException;
 }
