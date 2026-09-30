@@ -18,11 +18,10 @@
  */
 package org.apache.maven.archetype;
 
-import javax.inject.Named;
-import javax.inject.Singleton;
-
 import java.util.Properties;
 
+import org.apache.maven.api.di.Named;
+import org.apache.maven.api.di.Singleton;
 import org.apache.velocity.app.VelocityEngine;
 
 /**

@@ -18,42 +18,36 @@
  */
 package org.apache.maven.archetype.test;
 
-import javax.inject.Inject;
-
 import java.io.File;
 import java.util.Properties;
 
+import org.apache.maven.api.Session;
+import org.apache.maven.api.di.Inject;
+import org.apache.maven.api.di.testing.MavenDITest;
 import org.apache.maven.archetype.ArchetypeGenerationRequest;
 import org.apache.maven.archetype.ArchetypeGenerationResult;
 import org.apache.maven.archetype.ArchetypeManager;
 import org.apache.maven.archetype.catalog.Archetype;
 import org.apache.maven.archetype.catalog.ArchetypeCatalog;
-import org.codehaus.plexus.testing.PlexusTest;
 import org.codehaus.plexus.util.FileUtils;
-import org.eclipse.aether.DefaultRepositorySystemSession;
-import org.eclipse.aether.RepositorySystem;
 import org.junit.jupiter.api.Test;
 
-import static org.codehaus.plexus.testing.PlexusExtension.getBasedir;
+import static org.apache.maven.testing.di.MavenDIExtension.getBasedir;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 /** @author Jason van Zyl */
-@PlexusTest
+@MavenDITest
 public class ArchetypeGenerationTest {
 
     @Inject
     private ArchetypeManager archetype;
 
-    @Inject
-    private RepositorySystem repositorySystem;
-
     @Test
     public void testProjectGenerationFromAnArchetype() throws Exception {
 
-        DefaultRepositorySystemSession repositorySession = RepositorySessions.withLocalRepository(
-                repositorySystem, new File("target/test-classes/repositories/central"));
+        Session session = TestSessions.create(new File("target/test-classes/repositories/central"));
 
-        ArchetypeCatalog catalog = archetype.getLocalCatalog(repositorySession);
+        ArchetypeCatalog catalog = archetype.getLocalCatalog(session);
 
         // Here I am just grabbing a OldArchetype but in a UI you would take the OldArchetype objects and present
         // them to the user.
@@ -81,7 +75,7 @@ public class ArchetypeGenerationTest {
                 .setArtifactId(artifactId)
                 .setVersion(version)
                 .setPackage(packageName)
-                .setRepositorySession(repositorySession);
+                .setSession(session);
 
         Properties archetypeRequiredProperties = new Properties();
         archetypeRequiredProperties.setProperty("property-with-default-1", "value-1");

@@ -18,10 +18,6 @@
  */
 package org.apache.maven.archetype.repositorycrawler;
 
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -34,12 +30,15 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.maven.api.di.Inject;
+import org.apache.maven.api.di.Named;
+import org.apache.maven.api.di.Singleton;
+import org.apache.maven.api.model.Model;
 import org.apache.maven.archetype.catalog.Archetype;
 import org.apache.maven.archetype.catalog.ArchetypeCatalog;
 import org.apache.maven.archetype.catalog.io.xpp3.ArchetypeCatalogXpp3Writer;
 import org.apache.maven.archetype.common.ArchetypeArtifactManager;
 import org.apache.maven.archetype.exception.UnknownArchetype;
-import org.apache.maven.model.Model;
 import org.codehaus.plexus.util.xml.XmlStreamWriter;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.slf4j.Logger;

@@ -18,8 +18,6 @@
  */
 package org.apache.maven.archetype.old;
 
-import javax.inject.Inject;
-
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
@@ -32,31 +30,26 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.maven.api.ArtifactCoordinates;
+import org.apache.maven.api.RemoteRepository;
+import org.apache.maven.api.Session;
+import org.apache.maven.api.di.Inject;
+import org.apache.maven.api.di.testing.MavenDITest;
+import org.apache.maven.api.model.Model;
+import org.apache.maven.api.services.xml.ModelXmlFactory;
+import org.apache.maven.api.services.xml.XmlReaderException;
 import org.apache.maven.archetype.ArchetypeGenerationRequest;
 import org.apache.maven.archetype.ArchetypeVelocityEngine;
 import org.apache.maven.archetype.exception.InvalidPackaging;
-import org.apache.maven.archetype.test.RepositorySessions;
-import org.apache.maven.model.Model;
-import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
+import org.apache.maven.archetype.test.TestSessions;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.context.Context;
-import org.codehaus.plexus.testing.PlexusTest;
 import org.codehaus.plexus.util.FileUtils;
-import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
-import org.eclipse.aether.DefaultRepositorySystemSession;
-import org.eclipse.aether.RepositorySystem;
-import org.eclipse.aether.RepositorySystemSession;
-import org.eclipse.aether.artifact.Artifact;
-import org.eclipse.aether.artifact.DefaultArtifact;
-import org.eclipse.aether.repository.RemoteRepository;
-import org.eclipse.aether.repository.RepositoryPolicy;
-import org.eclipse.aether.resolution.ArtifactRequest;
-import org.eclipse.aether.resolution.ArtifactResult;
 import org.junit.jupiter.api.Test;
 import org.xmlunit.builder.DiffBuilder;
 import org.xmlunit.diff.Diff;
 
-import static org.codehaus.plexus.testing.PlexusExtension.getTestFile;
+import static org.apache.maven.testing.di.MavenDIExtension.getTestFile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -66,14 +59,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * @author <a href="mailto:jason@maven.org">Jason van Zyl</a>
  * @version $Id$
  */
-@PlexusTest
+@MavenDITest
 public class ArchetypeTest {
 
     @Inject
     private OldArchetype archetype;
 
     @Inject
-    private RepositorySystem repositorySystem;
+    private ModelXmlFactory modelXmlFactory;
 
     @Inject
     private ArchetypeVelocityEngine velocity;
@@ -92,16 +85,10 @@ public class ArchetypeTest {
         String mavenRepoRemote =
                 getTestFile("src/test/repository").toURI().toURL().toString();
 
-        RemoteRepository remoteRepository = new RemoteRepository.Builder("remote", "default", mavenRepoRemote)
-                .setReleasePolicy(new RepositoryPolicy())
-                .setSnapshotPolicy(new RepositoryPolicy())
-                .build();
+        Session session = TestSessions.create(new File(mavenRepoLocal));
 
         List<RemoteRepository> remoteRepositories = new ArrayList<>();
-        remoteRepositories.add(remoteRepository);
-
-        DefaultRepositorySystemSession repositorySession =
-                RepositorySessions.withLocalRepository(repositorySystem, new File(mavenRepoLocal));
+        remoteRepositories.add(session.createRemoteRepository("remote", mavenRepoRemote));
 
         ArchetypeGenerationRequest request = new ArchetypeGenerationRequest()
                 .setPackage("org.apache.maven.quickstart")
@@ -112,7 +99,7 @@ public class ArchetypeTest {
                 .setArchetypeArtifactId("maven-archetype-quickstart")
                 .setArchetypeVersion("1.0-alpha-1-SNAPSHOT")
                 .setRemoteRepositories(remoteRepositories)
-                .setRepositorySession(repositorySession)
+                .setSession(session)
                 .setOutputDirectory(getTestFile("target").getAbsolutePath());
 
         archetype.createArchetype(request);
@@ -139,15 +126,15 @@ public class ArchetypeTest {
         // Validate POM generation
         // ----------------------------------------------------------------------
 
-        Artifact archetypeArtifact = new DefaultArtifact(
-                request.getArchetypeGroupId(), request.getArchetypeArtifactId(), "jar", request.getArchetypeVersion());
+        ArtifactCoordinates archetypeArtifact = session.createArtifactCoordinates(
+                request.getArchetypeGroupId(), request.getArchetypeArtifactId(), request.getArchetypeVersion(), "jar");
 
         StringWriter writer = new StringWriter();
 
         ClassLoader old = Thread.currentThread().getContextClassLoader();
 
         Thread.currentThread()
-                .setContextClassLoader(getContextClassloader(archetypeArtifact, repositorySession, remoteRepositories));
+                .setContextClassLoader(getContextClassloader(session, archetypeArtifact, remoteRepositories));
 
         try {
             velocity.getEngine()
@@ -164,10 +151,8 @@ public class ArchetypeTest {
         try {
             StringReader strReader = new StringReader(writer.toString());
 
-            MavenXpp3Reader reader = new MavenXpp3Reader();
-
-            templateModel = reader.read(strReader);
-        } catch (IOException e) {
+            templateModel = modelXmlFactory.read(strReader);
+        } catch (XmlReaderException e) {
             throw new ArchetypeTemplateProcessingException("Error reading template POM", e);
         }
 
@@ -175,10 +160,8 @@ public class ArchetypeTest {
         File pomFile = getTestFile(artifactDir.getAbsolutePath(), OldArchetype.ARCHETYPE_POM);
 
         try (FileReader pomReader = new FileReader(pomFile)) {
-            MavenXpp3Reader reader = new MavenXpp3Reader();
-
-            generatedModel = reader.read(pomReader);
-        } catch (IOException | XmlPullParserException e) {
+            generatedModel = modelXmlFactory.read(pomReader);
+        } catch (IOException | XmlReaderException e) {
             throw new ArchetypeTemplateProcessingException("Error reading generated POM", e);
         }
         assertEquals(
@@ -213,13 +196,14 @@ public class ArchetypeTest {
 
     // Gets the classloader for this artifact's file.
     private ClassLoader getContextClassloader(
-            Artifact archetypeArtifact,
-            RepositorySystemSession repositorySystemSession,
-            List<RemoteRepository> remoteRepositories)
+            Session session, ArtifactCoordinates archetypeArtifact, List<RemoteRepository> remoteRepositories)
             throws Exception {
-        ArtifactRequest request = new ArtifactRequest(archetypeArtifact, remoteRepositories, null);
-        ArtifactResult artifactResult = repositorySystem.resolveArtifact(repositorySystemSession, request);
-        URL[] urls = new URL[] {artifactResult.getArtifact().getFile().toURI().toURL()};
+        URL[] urls = new URL[] {
+            session.resolveArtifact(archetypeArtifact, remoteRepositories)
+                    .getPath()
+                    .toUri()
+                    .toURL()
+        };
         return new URLClassLoader(urls);
     }
 

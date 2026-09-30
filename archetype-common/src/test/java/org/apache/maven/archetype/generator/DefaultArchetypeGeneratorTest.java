@@ -18,8 +18,6 @@
  */
 package org.apache.maven.archetype.generator;
 
-import javax.inject.Inject;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,21 +26,19 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.Properties;
 
+import org.apache.maven.api.di.Inject;
+import org.apache.maven.api.di.testing.MavenDITest;
+import org.apache.maven.api.model.Model;
+import org.apache.maven.api.services.xml.ModelXmlFactory;
 import org.apache.maven.archetype.ArchetypeGenerationRequest;
 import org.apache.maven.archetype.ArchetypeGenerationResult;
-import org.apache.maven.archetype.test.RepositorySessions;
-import org.apache.maven.model.Model;
-import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
-import org.codehaus.plexus.testing.PlexusTest;
+import org.apache.maven.archetype.test.TestSessions;
 import org.codehaus.plexus.util.FileUtils;
 import org.codehaus.plexus.util.xml.XmlStreamReader;
-import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
-import org.eclipse.aether.DefaultRepositorySystemSession;
-import org.eclipse.aether.RepositorySystem;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.codehaus.plexus.testing.PlexusExtension.getBasedir;
+import static org.apache.maven.testing.di.MavenDIExtension.getBasedir;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -50,7 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-@PlexusTest
+@MavenDITest
 public class DefaultArchetypeGeneratorTest {
     // archetypes prepared by antrun execution (see pom.xml) from src/test/archetypes
     private static final Archetype ARCHETYPE_BASIC = new Archetype("archetypes", "basic", "1.0");
@@ -89,7 +85,7 @@ public class DefaultArchetypeGeneratorTest {
     private ArchetypeGenerator generator;
 
     @Inject
-    private RepositorySystem repositorySystem;
+    private ModelXmlFactory modelXmlFactory;
 
     private String outputDirectory;
 
@@ -464,10 +460,7 @@ public class DefaultArchetypeGeneratorTest {
 
         request.setProperties(ADDITIONAL_PROPERTIES);
 
-        DefaultRepositorySystemSession repositorySession =
-                RepositorySessions.withLocalRepository(repositorySystem, new File(localRepository));
-
-        request.setRepositorySession(repositorySession);
+        request.setSession(TestSessions.create(new File(localRepository)));
         return request;
     }
 
@@ -543,11 +536,9 @@ public class DefaultArchetypeGeneratorTest {
         return new File(outputDirectory, "/pom.xml.sample");
     }
 
-    private Model readPom(final File pomFile) throws IOException, XmlPullParserException {
+    private Model readPom(final File pomFile) throws IOException {
         try (Reader pomReader = new XmlStreamReader(pomFile)) {
-            MavenXpp3Reader reader = new MavenXpp3Reader();
-
-            return reader.read(pomReader);
+            return modelXmlFactory.read(pomReader);
         }
     }
 

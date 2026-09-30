@@ -18,9 +18,6 @@
  */
 package org.apache.maven.archetype.old;
 
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
 
@@ -36,10 +33,22 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
+import org.apache.maven.api.di.Inject;
+import org.apache.maven.api.di.Named;
+import org.apache.maven.api.di.Singleton;
+import org.apache.maven.api.model.Build;
+import org.apache.maven.api.model.Model;
+import org.apache.maven.api.model.Parent;
+import org.apache.maven.api.model.Resource;
+import org.apache.maven.api.services.xml.ModelXmlFactory;
+import org.apache.maven.api.services.xml.XmlReaderException;
+import org.apache.maven.api.services.xml.XmlWriterException;
 import org.apache.maven.archetype.ArchetypeGenerationRequest;
 import org.apache.maven.archetype.ArchetypeVelocityEngine;
 import org.apache.maven.archetype.common.ArchetypeArtifactManager;
@@ -50,12 +59,6 @@ import org.apache.maven.archetype.exception.UnknownArchetype;
 import org.apache.maven.archetype.old.descriptor.ArchetypeDescriptor;
 import org.apache.maven.archetype.old.descriptor.ArchetypeDescriptorBuilder;
 import org.apache.maven.archetype.old.descriptor.TemplateDescriptor;
-import org.apache.maven.model.Build;
-import org.apache.maven.model.Model;
-import org.apache.maven.model.Parent;
-import org.apache.maven.model.Resource;
-import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
-import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.context.Context;
 import org.codehaus.plexus.util.FileUtils;
@@ -92,10 +95,16 @@ public class DefaultOldArchetype implements OldArchetype {
 
     private ArchetypeArtifactManager archetypeArtifactManager;
 
+    private ModelXmlFactory modelXmlFactory;
+
     @Inject
-    public DefaultOldArchetype(ArchetypeVelocityEngine velocity, ArchetypeArtifactManager archetypeArtifactManager) {
+    public DefaultOldArchetype(
+            ArchetypeVelocityEngine velocity,
+            ArchetypeArtifactManager archetypeArtifactManager,
+            ModelXmlFactory modelXmlFactory) {
         this.archetypeArtifactManager = archetypeArtifactManager;
         this.velocity = velocity;
+        this.modelXmlFactory = modelXmlFactory;
     }
 
     // ----------------------------------------------------------------------
@@ -119,7 +128,7 @@ public class DefaultOldArchetype implements OldArchetype {
                 request.getArchetypeArtifactId(),
                 request.getArchetypeVersion(),
                 request.getRemoteRepositories(),
-                request.getRepositorySession());
+                request.getSession());
 
         createArchetype(request, archetypeFile);
     }
@@ -264,16 +273,17 @@ public class DefaultOldArchetype implements OldArchetype {
         if (creating) {
             if (parentPomFile.exists()) {
                 try (Reader fileReader = new XmlStreamReader(parentPomFile)) {
-                    MavenXpp3Reader reader = new MavenXpp3Reader();
-                    parentModel = reader.read(fileReader);
+                    parentModel = modelXmlFactory.read(fileReader, false);
                     if (!"pom".equals(parentModel.getPackaging())) {
                         throw new ArchetypeTemplateProcessingException(
                                 "Unable to add module to the current project as it is not of packaging type 'pom'");
                     }
-                } catch (IOException | XmlPullParserException e) {
+                } catch (IOException | XmlReaderException e) {
                     throw new ArchetypeTemplateProcessingException("Unable to read parent POM", e);
                 }
-                parentModel.getModules().add(artifactId);
+                List<String> modules = new ArrayList<>(parentModel.getModules());
+                modules.add(artifactId);
+                parentModel = parentModel.withModules(modules);
             }
         }
 
@@ -373,30 +383,29 @@ public class DefaultOldArchetype implements OldArchetype {
         Model generatedModel;
 
         try (Reader pomReader = new XmlStreamReader(pomFile)) {
-            MavenXpp3Reader reader = new MavenXpp3Reader();
-
-            generatedModel = reader.read(pomReader);
-        } catch (IOException | XmlPullParserException e) {
+            generatedModel = modelXmlFactory.read(pomReader, false);
+        } catch (IOException | XmlReaderException e) {
             throw new ArchetypeTemplateProcessingException("Error reading POM", e);
         }
 
         if (parentModel != null) {
-            Parent parent = new Parent();
-            parent.setGroupId(parentModel.getGroupId());
-            if (parent.getGroupId() == null) {
-                parent.setGroupId(parentModel.getParent().getGroupId());
+            Parent.Builder parent = Parent.newBuilder();
+            String parentGroupId = parentModel.getGroupId();
+            if (parentGroupId == null) {
+                parentGroupId = parentModel.getParent().getGroupId();
             }
-            parent.setArtifactId(parentModel.getArtifactId());
-            parent.setVersion(parentModel.getVersion());
-            if (parent.getVersion() == null) {
-                parent.setVersion(parentModel.getParent().getVersion());
+            parent.groupId(parentGroupId);
+            parent.artifactId(parentModel.getArtifactId());
+            String parentVersion = parentModel.getVersion();
+            if (parentVersion == null) {
+                parentVersion = parentModel.getParent().getVersion();
             }
-            generatedModel.setParent(parent);
+            parent.version(parentVersion);
+            generatedModel = generatedModel.withParent(parent.build());
 
             try (Writer pomWriter = new XmlStreamWriter(pomFile)) {
-                MavenXpp3Writer writer = new MavenXpp3Writer();
-                writer.write(pomWriter, generatedModel);
-            } catch (IOException e) {
+                modelXmlFactory.write(generatedModel, pomWriter);
+            } catch (IOException | XmlWriterException e) {
                 throw new ArchetypeTemplateProcessingException("Error rewriting POM", e);
             }
         }

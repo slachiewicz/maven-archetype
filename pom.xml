@@ -29,7 +29,7 @@
 
   <groupId>org.apache.maven.archetype</groupId>
   <artifactId>maven-archetype</artifactId>
-  <version>3.5.0-SNAPSHOT</version>
+  <version>4.0.0-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Maven Archetype</name>
@@ -43,7 +43,7 @@
   <modules>
     <module>archetype-models</module>
     <module>archetype-common</module>
-    <module>maven-archetype-plugin</module>
+    <!-- consumer of archetype-common: still on the Maven 3 API, not part of this reactor -->
     <module>archetype-packaging</module>
   </modules>
 
@@ -71,9 +71,8 @@
 
   <properties>
     <maven.archetype.scm.devConnection>scm:git:https://gitbox.apache.org/repos/asf/maven-archetype.git</maven.archetype.scm.devConnection>
-    <mavenVersion>3.9.16</mavenVersion>
-    <!-- provided by Maven core. From 3.10.x on it needs to be ported to resolver 2.x -->
-    <resolverVersion>1.9.27</resolverVersion>
+    <mavenVersion>4.0.0-rc-7</mavenVersion>
+    <javaVersion>17</javaVersion>
     <netbeans.hint.useExternalMaven>true</netbeans.hint.useExternalMaven>
     <maven.site.path>archetype-archives/archetype-LATEST</maven.site.path>
     <project.build.outputTimestamp>2025-10-03T18:48:44Z</project.build.outputTimestamp>
@@ -119,44 +118,26 @@
       </dependency>
       <dependency>
         <groupId>org.apache.maven</groupId>
-        <artifactId>maven-artifact</artifactId>
+        <artifactId>maven-api-core</artifactId>
         <version>${mavenVersion}</version>
         <scope>provided</scope>
       </dependency>
       <dependency>
         <groupId>org.apache.maven</groupId>
-        <artifactId>maven-core</artifactId>
+        <artifactId>maven-api-model</artifactId>
         <version>${mavenVersion}</version>
         <scope>provided</scope>
       </dependency>
       <dependency>
         <groupId>org.apache.maven</groupId>
-        <artifactId>maven-model</artifactId>
+        <artifactId>maven-api-xml</artifactId>
         <version>${mavenVersion}</version>
         <scope>provided</scope>
       </dependency>
       <dependency>
         <groupId>org.apache.maven</groupId>
-        <artifactId>maven-plugin-api</artifactId>
+        <artifactId>maven-api-di</artifactId>
         <version>${mavenVersion}</version>
-        <scope>provided</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.maven</groupId>
-        <artifactId>maven-settings</artifactId>
-        <version>${mavenVersion}</version>
-        <scope>provided</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.maven</groupId>
-        <artifactId>maven-settings-builder</artifactId>
-        <version>${mavenVersion}</version>
-        <scope>provided</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.maven.resolver</groupId>
-        <artifactId>maven-resolver-api</artifactId>
-        <version>${resolverVersion}</version>
         <scope>provided</scope>
       </dependency>
       <dependency>
@@ -243,6 +224,7 @@
               <exclude>.java-version</exclude>
               <!-- binary images in IT fixtures -->
               <exclude>**/*.png</exclude>
+              <exclude>**/src/it/projects/**/*.ogg</exclude>
             </inputExcludes>
           </configuration>
         </plugin>

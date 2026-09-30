@@ -21,8 +21,8 @@ package org.apache.maven.archetype.downloader;
 import java.io.File;
 import java.util.List;
 
-import org.eclipse.aether.RepositorySystemSession;
-import org.eclipse.aether.repository.RemoteRepository;
+import org.apache.maven.api.RemoteRepository;
+import org.apache.maven.api.Session;
 
 /**
  * @author Jason van Zyl
@@ -33,6 +33,6 @@ public interface Downloader {
             String artifactId,
             String version,
             List<RemoteRepository> remoteRepositories,
-            RepositorySystemSession repositorySystemSession)
+            Session repositorySystemSession)
             throws DownloadException;
 }

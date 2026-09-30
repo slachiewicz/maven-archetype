@@ -36,51 +36,51 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 
+import org.apache.maven.api.model.Activation;
+import org.apache.maven.api.model.ActivationFile;
+import org.apache.maven.api.model.ActivationOS;
+import org.apache.maven.api.model.ActivationProperty;
+import org.apache.maven.api.model.Build;
+import org.apache.maven.api.model.BuildBase;
+import org.apache.maven.api.model.CiManagement;
+import org.apache.maven.api.model.ConfigurationContainer;
+import org.apache.maven.api.model.Contributor;
+import org.apache.maven.api.model.Dependency;
+import org.apache.maven.api.model.DependencyManagement;
+import org.apache.maven.api.model.DeploymentRepository;
+import org.apache.maven.api.model.Developer;
+import org.apache.maven.api.model.DistributionManagement;
+import org.apache.maven.api.model.Exclusion;
+import org.apache.maven.api.model.Extension;
+import org.apache.maven.api.model.FileSet;
+import org.apache.maven.api.model.IssueManagement;
+import org.apache.maven.api.model.License;
+import org.apache.maven.api.model.MailingList;
+import org.apache.maven.api.model.Model;
+import org.apache.maven.api.model.Notifier;
+import org.apache.maven.api.model.Organization;
+import org.apache.maven.api.model.Parent;
+import org.apache.maven.api.model.PatternSet;
+import org.apache.maven.api.model.Plugin;
+import org.apache.maven.api.model.PluginConfiguration;
+import org.apache.maven.api.model.PluginContainer;
+import org.apache.maven.api.model.PluginExecution;
+import org.apache.maven.api.model.PluginManagement;
+import org.apache.maven.api.model.Prerequisites;
+import org.apache.maven.api.model.Profile;
+import org.apache.maven.api.model.Relocation;
+import org.apache.maven.api.model.ReportPlugin;
+import org.apache.maven.api.model.ReportSet;
+import org.apache.maven.api.model.Reporting;
+import org.apache.maven.api.model.Repository;
+import org.apache.maven.api.model.RepositoryBase;
+import org.apache.maven.api.model.RepositoryPolicy;
+import org.apache.maven.api.model.Resource;
+import org.apache.maven.api.model.Scm;
+import org.apache.maven.api.model.Site;
+import org.apache.maven.api.xml.XmlNode;
 import org.apache.maven.archetype.common.util.Format;
 import org.apache.maven.archetype.common.util.XMLOutputter;
-import org.apache.maven.model.Activation;
-import org.apache.maven.model.ActivationFile;
-import org.apache.maven.model.ActivationOS;
-import org.apache.maven.model.ActivationProperty;
-import org.apache.maven.model.Build;
-import org.apache.maven.model.BuildBase;
-import org.apache.maven.model.CiManagement;
-import org.apache.maven.model.ConfigurationContainer;
-import org.apache.maven.model.Contributor;
-import org.apache.maven.model.Dependency;
-import org.apache.maven.model.DependencyManagement;
-import org.apache.maven.model.DeploymentRepository;
-import org.apache.maven.model.Developer;
-import org.apache.maven.model.DistributionManagement;
-import org.apache.maven.model.Exclusion;
-import org.apache.maven.model.Extension;
-import org.apache.maven.model.FileSet;
-import org.apache.maven.model.IssueManagement;
-import org.apache.maven.model.License;
-import org.apache.maven.model.MailingList;
-import org.apache.maven.model.Model;
-import org.apache.maven.model.Notifier;
-import org.apache.maven.model.Organization;
-import org.apache.maven.model.Parent;
-import org.apache.maven.model.PatternSet;
-import org.apache.maven.model.Plugin;
-import org.apache.maven.model.PluginConfiguration;
-import org.apache.maven.model.PluginContainer;
-import org.apache.maven.model.PluginExecution;
-import org.apache.maven.model.PluginManagement;
-import org.apache.maven.model.Prerequisites;
-import org.apache.maven.model.Profile;
-import org.apache.maven.model.Relocation;
-import org.apache.maven.model.ReportPlugin;
-import org.apache.maven.model.ReportSet;
-import org.apache.maven.model.Reporting;
-import org.apache.maven.model.Repository;
-import org.apache.maven.model.RepositoryBase;
-import org.apache.maven.model.RepositoryPolicy;
-import org.apache.maven.model.Resource;
-import org.apache.maven.model.Scm;
-import org.apache.maven.model.Site;
-import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.jdom2.Content;
 import org.jdom2.DefaultJDOMFactory;
 import org.jdom2.Document;
@@ -276,13 +276,13 @@ public class MavenJDOMWriter {
      * @param name
      * @param parent
      */
-    protected void findAndReplaceXpp3DOM(Counter counter, Element parent, String name, Xpp3Dom dom) {
-        boolean shouldExist = (dom != null) && ((dom.getChildCount() > 0) || (dom.getValue() != null));
+    protected void findAndReplaceXpp3DOM(Counter counter, Element parent, String name, XmlNode dom) {
+        boolean shouldExist = (dom != null) && ((!dom.getChildren().isEmpty()) || (dom.getValue() != null));
         Element element = updateElement(counter, parent, name, shouldExist);
         if (shouldExist) {
             replaceXpp3DOM(element, dom, new Counter(counter.getDepth() + 1));
         }
-    } // -- Element findAndReplaceXpp3DOM(Counter, Element, String, Xpp3Dom)
+    } // -- Element findAndReplaceXpp3DOM(Counter, Element, String, XmlNode)
 
     /**
      * Method insertAtPreferredLocation.
@@ -1036,21 +1036,17 @@ public class MavenJDOMWriter {
      * @param counter
      * @param parentDom
      */
-    protected void replaceXpp3DOM(Element parent, Xpp3Dom parentDom, Counter counter) {
-        if (parentDom.getChildCount() > 0) {
-            Xpp3Dom[] childs = parentDom.getChildren();
-            Collection domChilds = new ArrayList();
-            for (int i = 0; i < childs.length; i++) {
-                domChilds.add(childs[i]);
-            }
+    protected void replaceXpp3DOM(Element parent, XmlNode parentDom, Counter counter) {
+        if (!parentDom.getChildren().isEmpty()) {
+            Collection domChilds = new ArrayList(parentDom.getChildren());
 
             ListIterator it = parent.getChildren().listIterator();
             while (it.hasNext()) {
                 Element elem = (Element) it.next();
                 Iterator it2 = domChilds.iterator();
-                Xpp3Dom corrDom = null;
+                XmlNode corrDom = null;
                 while (it2.hasNext()) {
-                    Xpp3Dom dm = (Xpp3Dom) it2.next();
+                    XmlNode dm = (XmlNode) it2.next();
                     if (dm.getName().equals(elem.getName())) {
                         corrDom = dm;
                         break;
@@ -1067,7 +1063,7 @@ public class MavenJDOMWriter {
 
             Iterator it2 = domChilds.iterator();
             while (it2.hasNext()) {
-                Xpp3Dom dm = (Xpp3Dom) it2.next();
+                XmlNode dm = (XmlNode) it2.next();
                 Element elem = factory.element(dm.getName(), parent.getNamespace());
                 insertAtPreferredLocation(parent, elem, counter);
                 counter.increaseCount();
@@ -1076,7 +1072,7 @@ public class MavenJDOMWriter {
         } else if (parentDom.getValue() != null) {
             parent.setText(parentDom.getValue());
         }
-    } // -- void replaceXpp3DOM(Element, Xpp3Dom, Counter)
+    } // -- void replaceXpp3DOM(Element, XmlNode, Counter)
 
     /**
      * Method updateActivation.
@@ -1249,7 +1245,7 @@ public class MavenJDOMWriter {
         if (shouldExist) {
             Counter innerCount = new Counter(counter.getDepth() + 1);
             findAndReplaceSimpleElement(innerCount, root, "inherited", value.getInherited(), null);
-            findAndReplaceXpp3DOM(innerCount, root, "configuration", (Xpp3Dom) value.getConfiguration());
+            findAndReplaceXpp3DOM(innerCount, root, "configuration", value.getConfiguration());
         }
     } // -- void updateConfigurationContainer(ConfigurationContainer, String, Counter, Element)
 
@@ -1564,7 +1560,6 @@ public class MavenJDOMWriter {
         iterateRepository(innerCount, root, value.getRepositories(), "repositories", "repository");
         iterateRepository(innerCount, root, value.getPluginRepositories(), "pluginRepositories", "pluginRepository");
         iterateDependency(innerCount, root, value.getDependencies(), "dependencies", "dependency");
-        findAndReplaceXpp3DOM(innerCount, root, "reports", (Xpp3Dom) safeGetReports(value));
         updateReporting(value.getReporting(), "reporting", innerCount, root);
         updateDependencyManagement(value.getDependencyManagement(), "dependencyManagement", innerCount, root);
         updateDistributionManagement(value.getDistributionManagement(), "distributionManagement", innerCount, root);
@@ -1689,28 +1684,9 @@ public class MavenJDOMWriter {
                 "false");
         iteratePluginExecution(innerCount, root, value.getExecutions(), "executions", "execution");
         iterateDependency(innerCount, root, value.getDependencies(), "dependencies", "dependency");
-        findAndReplaceXpp3DOM(innerCount, root, "goals", (Xpp3Dom) safeGetGoals(value));
         findAndReplaceSimpleElement(innerCount, root, "inherited", value.getInherited(), null);
-        findAndReplaceXpp3DOM(innerCount, root, "configuration", (Xpp3Dom) value.getConfiguration());
+        findAndReplaceXpp3DOM(innerCount, root, "configuration", value.getConfiguration());
     } // -- void updatePlugin(Plugin, String, Counter, Element)
-
-    // Workaround for Maven 4 dropped methods
-
-    private Object safeGetGoals(Plugin plugin) {
-        try {
-            return plugin.getGoals();
-        } catch (NoSuchMethodError e) {
-            return null;
-        }
-    }
-
-    private Object safeGetReports(Model model) {
-        try {
-            return model.getReports();
-        } catch (NoSuchMethodError e) {
-            return null;
-        }
-    }
 
     /**
      * Method updatePluginConfiguration.
@@ -1763,7 +1739,7 @@ public class MavenJDOMWriter {
         findAndReplaceSimpleElement(innerCount, root, "phase", value.getPhase(), null);
         findAndReplaceSimpleLists(innerCount, root, value.getGoals(), "goals", "goal");
         findAndReplaceSimpleElement(innerCount, root, "inherited", value.getInherited(), null);
-        findAndReplaceXpp3DOM(innerCount, root, "configuration", (Xpp3Dom) value.getConfiguration());
+        findAndReplaceXpp3DOM(innerCount, root, "configuration", value.getConfiguration());
     } // -- void updatePluginExecution(PluginExecution, String, Counter, Element)
 
     /**
@@ -1818,7 +1794,6 @@ public class MavenJDOMWriter {
         iterateRepository(innerCount, root, value.getRepositories(), "repositories", "repository");
         iterateRepository(innerCount, root, value.getPluginRepositories(), "pluginRepositories", "pluginRepository");
         iterateDependency(innerCount, root, value.getDependencies(), "dependencies", "dependency");
-        findAndReplaceXpp3DOM(innerCount, root, "reports", (Xpp3Dom) value.getReports());
         updateReporting(value.getReporting(), "reporting", innerCount, root);
         updateDependencyManagement(value.getDependencyManagement(), "dependencyManagement", innerCount, root);
         updateDistributionManagement(value.getDistributionManagement(), "distributionManagement", innerCount, root);
@@ -1884,7 +1859,7 @@ public class MavenJDOMWriter {
         findAndReplaceSimpleElement(innerCount, root, "artifactId", value.getArtifactId(), null);
         findAndReplaceSimpleElement(innerCount, root, "version", value.getVersion(), null);
         findAndReplaceSimpleElement(innerCount, root, "inherited", value.getInherited(), null);
-        findAndReplaceXpp3DOM(innerCount, root, "configuration", (Xpp3Dom) value.getConfiguration());
+        findAndReplaceXpp3DOM(innerCount, root, "configuration", value.getConfiguration());
         iterateReportSet(innerCount, root, value.getReportSets(), "reportSets", "reportSet");
     } // -- void updateReportPlugin(ReportPlugin, String, Counter, Element)
 
@@ -1900,7 +1875,7 @@ public class MavenJDOMWriter {
         Element root = element;
         Counter innerCount = new Counter(counter.getDepth() + 1);
         findAndReplaceSimpleElement(innerCount, root, "id", value.getId(), "default");
-        findAndReplaceXpp3DOM(innerCount, root, "configuration", (Xpp3Dom) value.getConfiguration());
+        findAndReplaceXpp3DOM(innerCount, root, "configuration", value.getConfiguration());
         findAndReplaceSimpleElement(innerCount, root, "inherited", value.getInherited(), null);
         findAndReplaceSimpleLists(innerCount, root, value.getReports(), "reports", "report");
     } // -- void updateReportSet(ReportSet, String, Counter, Element)

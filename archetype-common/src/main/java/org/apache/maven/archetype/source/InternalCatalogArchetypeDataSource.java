@@ -18,20 +18,19 @@
  */
 package org.apache.maven.archetype.source;
 
-import javax.inject.Named;
-import javax.inject.Singleton;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.util.List;
 
+import org.apache.maven.api.RemoteRepository;
+import org.apache.maven.api.Session;
+import org.apache.maven.api.di.Named;
+import org.apache.maven.api.di.Singleton;
 import org.apache.maven.archetype.catalog.Archetype;
 import org.apache.maven.archetype.catalog.ArchetypeCatalog;
 import org.codehaus.plexus.util.xml.XmlStreamReader;
-import org.eclipse.aether.RepositorySystemSession;
-import org.eclipse.aether.repository.RemoteRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,8 +43,7 @@ public class InternalCatalogArchetypeDataSource extends CatalogArchetypeDataSour
     private static final Logger LOGGER = LoggerFactory.getLogger(InternalCatalogArchetypeDataSource.class);
 
     @Override
-    public ArchetypeCatalog getArchetypeCatalog(
-            RepositorySystemSession repositorySession, List<RemoteRepository> remoteRepositories)
+    public ArchetypeCatalog getArchetypeCatalog(Session repositorySession, List<RemoteRepository> remoteRepositories)
             throws ArchetypeDataSourceException {
         try (InputStream in = getClass().getClassLoader().getResourceAsStream(ARCHETYPE_CATALOG_FILENAME);
                 Reader reader = new XmlStreamReader(in)) {
@@ -56,8 +54,7 @@ public class InternalCatalogArchetypeDataSource extends CatalogArchetypeDataSour
     }
 
     @Override
-    public File updateCatalog(RepositorySystemSession repositorySession, Archetype archetype)
-            throws ArchetypeDataSourceException {
+    public File updateCatalog(Session repositorySession, Archetype archetype) throws ArchetypeDataSourceException {
         throw new ArchetypeDataSourceException("Not supported yet.");
     }
 }

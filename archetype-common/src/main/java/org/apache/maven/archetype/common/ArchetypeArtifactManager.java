@@ -23,12 +23,12 @@ import java.io.IOException;
 import java.util.List;
 import java.util.zip.ZipFile;
 
+import org.apache.maven.api.RemoteRepository;
+import org.apache.maven.api.Session;
+import org.apache.maven.api.model.Model;
 import org.apache.maven.archetype.exception.UnknownArchetype;
 import org.apache.maven.archetype.metadata.ArchetypeDescriptor;
-import org.apache.maven.model.Model;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
-import org.eclipse.aether.RepositorySystemSession;
-import org.eclipse.aether.repository.RemoteRepository;
 
 public interface ArchetypeArtifactManager {
 
@@ -39,7 +39,7 @@ public interface ArchetypeArtifactManager {
             String artifactId,
             String version,
             List<RemoteRepository> repositories,
-            RepositorySystemSession repositorySystemSession)
+            Session repositorySystemSession)
             throws UnknownArchetype;
 
     ClassLoader getArchetypeJarLoader(File archetypeFile) throws UnknownArchetype;
@@ -55,7 +55,7 @@ public interface ArchetypeArtifactManager {
             String archetypeArtifactId,
             String archetypeVersion,
             List<RemoteRepository> repos,
-            RepositorySystemSession repositorySystemSession);
+            Session repositorySystemSession);
 
     /**
      * Get the archetype file's post-generation script content, read as UTF-8 content.

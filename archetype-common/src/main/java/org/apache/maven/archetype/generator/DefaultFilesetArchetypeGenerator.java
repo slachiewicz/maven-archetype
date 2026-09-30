@@ -18,9 +18,6 @@
  */
 package org.apache.maven.archetype.generator;
 
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
 
@@ -44,6 +41,9 @@ import java.util.zip.ZipFile;
 
 import groovy.lang.Binding;
 import groovy.lang.GroovyShell;
+import org.apache.maven.api.di.Inject;
+import org.apache.maven.api.di.Named;
+import org.apache.maven.api.di.Singleton;
 import org.apache.maven.archetype.ArchetypeGenerationRequest;
 import org.apache.maven.archetype.ArchetypeVelocityEngine;
 import org.apache.maven.archetype.common.ArchetypeArtifactManager;
