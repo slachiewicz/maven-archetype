@@ -312,11 +312,9 @@ public class DefaultPomManager implements PomManager {
 
         // ModelBase can be a Model or a Profile...
         merged.dependencies(mergeDependencies(modelProfile.getDependencies(), generatedProfile.getDependencies()));
-        if (!generatedProfile.getDependencies().isEmpty()) {
-            Map<String, String> properties = new LinkedHashMap<>(modelProfile.getProperties());
-            properties.putAll(generatedProfile.getProperties());
-            merged.properties(properties);
-        }
+        Map<String, String> properties = new LinkedHashMap<>(modelProfile.getProperties());
+        properties.putAll(generatedProfile.getProperties());
+        merged.properties(properties);
         // TODO: maybe merge more than just dependencies and properties...
 
         if (generatedProfile.getBuild() != null) {
